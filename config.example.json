@@ -1,0 +1,20 @@
+{
+  "settings": {
+    "timezone": "Asia/Kolkata",
+    "adminPassword": "CHANGE_THIS_PASSWORD",
+    "defaultCollectionPath": "./collections",
+    "jwtSecret": "CHANGE_THIS_SECRET_KEY",
+    "emailEnabled": false,
+    "smtpSettings": {
+      "host": "smtp.gmail.com",
+      "port": 587,
+      "user": "",
+      "password": ""
+    }
+  },
+  "users": {},
+  "userSchedules": {},
+  "activeSchedules": [],
+  "collections": {},
+  "schedules": {}
+}

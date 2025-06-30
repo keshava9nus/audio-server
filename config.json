@@ -1,0 +1,69 @@
+{
+  "settings": {
+    "timezone": "Asia/Kolkata",
+    "adminPassword": "HareKrishna",
+    "defaultCollectionPath": "./audio",
+    "jwtSecret": "your-secure-jwt-secret-key-change-this-in-production",
+    "emailEnabled": false,
+    "smtpSettings": {
+      "host": "smtp.gmail.com",
+      "port": 587,
+      "user": "",
+      "password": ""
+    }
+  },
+  "users": {
+    "e2c9e269-8976-4a63-9d1d-67789b4f5a86": {
+      "id": "e2c9e269-8976-4a63-9d1d-67789b4f5a86",
+      "name": "Guest",
+      "email": "a@b.com",
+      "password": "$2b$10$AmH8l5M4/oauTy1Cic8h8eWlfmLML8DK8pIKBeO18B6DizCmX3xdC",
+      "verified": false,
+      "createdAt": "2025-06-29T15:21:54.086Z",
+      "schedules": []
+    }
+  },
+  "userSchedules": {
+    "e2c9e269-8976-4a63-9d1d-67789b4f5a86": [
+      "always_active_test_schedule"
+    ]
+  },
+  "activeSchedules": [
+    "always_active_test_schedule"
+  ],
+  "collections": {
+    "sample_audio_collection": {
+      "name": "Sample Audio Collection",
+      "path": "./audio",
+      "files": [
+        "76. Elements of Akarma 2 (01.12.20).mp3",
+        "77. The four types of karma phala (02.12.20).mp3",
+        "78. Krsna is pleased when we chant His Holy name (03.12.20).mp3",
+        "79. Hari nama sankirtana (04.12.20).mp3",
+        "80. Surrendering to Krsna by chanting and hearing the Holy name (05.12.20).mp3",
+        "81. Q&A on Karma topic (06.12.20).mp3",
+        "Hare Krsna Kirtana.mp3"
+      ]
+    }
+  },
+  "schedules": {
+    "always_active_test_schedule": {
+      "name": "Always Active Test Schedule",
+      "collection": "sample_audio_collection",
+      "enabled": true,
+      "timeSlots": [
+        {
+          "id": "slot1",
+          "dayOfWeek": "*",
+          "startTime": "00:00",
+          "endTime": "23:59",
+          "timezone": "Asia/Kolkata"
+        }
+      ],
+      "dateRange": {
+        "startDate": null,
+        "endDate": null
+      }
+    }
+  }
+}

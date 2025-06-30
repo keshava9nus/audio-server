@@ -1,0 +1,41 @@
+🎵 Scheduled Audio Server running at http://localhost:8000
+📱 Admin Panel: http://localhost:8000/admin
+🌐 Public URL: https://sleepy-thunder-45656.pktriot.net
+⚙️  Configuration file: /Users/shivin/Desktop/tunnel_test/config.json
+✅ CORS and scheduling enabled
+Press Ctrl+C to stop the server
+
+=== Checking Active Files ===
+Total schedules: 1
+
+Schedule: always_active_test_schedule (Always Active Test Schedule)
+  Enabled: true
+[Schedule Check] Always Active Test Schedule:
+  Current time: 10:35 (Asia/Kolkata)
+  Current day: 1 (0=Sun, 1=Mon...)
+  Current date: 2025-06-30
+  Checking slot: 00:00-23:59, days: *
+  Time comparison: 635 (10:35) between 0 (00:00) and 1439 (23:59)
+  ✅ Schedule is ACTIVE!
+  Time check result: true
+  Collection: sample_audio_collection
+  Files in collection: 7
+  ✅ Adding file: 76. Elements of Akarma 2 (01.12.20).mp3
+  ✅ Adding file: 77. The four types of karma phala (02.12.20).mp3
+  ✅ Adding file: 78. Krsna is pleased when we chant His Holy name (03.12.20).mp3
+  ✅ Adding file: 79. Hari nama sankirtana (04.12.20).mp3
+  ✅ Adding file: 80. Surrendering to Krsna by chanting and hearing the Holy name (05.12.20).mp3
+  ✅ Adding file: 81. Q&A on Karma topic (06.12.20).mp3
+  ✅ Adding file: Hare Krsna Kirtana.mp3
+
+Total active files: 7
+===============================
+
+[Schedule Check] Always Active Test Schedule:
+  Current time: 10:35 (Asia/Kolkata)
+  Current day: 1 (0=Sun, 1=Mon...)
+  Current date: 2025-06-30
+  Checking slot: 00:00-23:59, days: *
+  Time comparison: 635 (10:35) between 0 (00:00) and 1439 (23:59)
+  ✅ Schedule is ACTIVE!
+✅ Admin authenticated successfully

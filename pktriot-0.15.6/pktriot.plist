@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>Label</key>
+        <string>pktriot</string>
+        <key>ProgramArguments</key>
+        <array>
+            <string>/usr/local/bin/pktriot</string>
+            <string>--config</string>
+            <string>/etc/pktriot/config.json</string>
+            <string>start</string>
+        </array>
+    <key>RunAtLoad</key>
+        <true/>
+    <key>StandardErrorPath</key>
+        <string>/tmp/pktriot.err</string>
+        <key>StandardOutPath</key>
+        <string>/tmp/pktriot.out</string>
+    </dict>
+</plist>
