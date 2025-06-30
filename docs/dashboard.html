@@ -220,7 +220,10 @@
         let userToken = localStorage.getItem('authToken');
         let currentUser = null;
 
-        const API_BASE_URL = 'https://sleepy-thunder-45656.pktriot.net';
+        // Auto-detect API base URL based on current location
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:8000' 
+            : 'https://sleepy-thunder-45656.pktriot.net';
         
         // Check authentication on load
         if (!userToken) {

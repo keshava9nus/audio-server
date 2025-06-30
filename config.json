@@ -30,6 +30,15 @@
       "verified": false,
       "createdAt": "2025-06-30T06:08:32.332Z",
       "schedules": []
+    },
+    "0e321b66-d0ba-4f68-a63f-1c4bba31be60": {
+      "id": "0e321b66-d0ba-4f68-a63f-1c4bba31be60",
+      "name": "Test User",
+      "email": "test2@example.com",
+      "password": "$2b$10$lZnJgtkEd7zmGHnyIrCQjunPRkpEMGxBn47TFkuaFLvE7v0L6uQWC",
+      "verified": false,
+      "createdAt": "2025-06-30T14:53:20.329Z",
+      "schedules": []
     }
   },
   "userSchedules": {
@@ -40,25 +49,25 @@
     "6c723882-487c-4978-bfc4-712a03d45c19": [
       "geetika_didi_schedule",
       "kirtans"
+    ],
+    "0e321b66-d0ba-4f68-a63f-1c4bba31be60": [
+      "always_active_test_schedule"
     ]
   },
   "activeSchedules": [
     "always_active_test_schedule",
-    "geetika_didi_schedule",
     "kirtans"
   ],
   "collections": {
     "sample_audio_collection": {
       "name": "Sample Audio Collection",
-      "path": "./audio",
+      "path": "/Users/shivin/GV/Classes/Bhagavad Gītā - Overview (Sep-Dec 2020) (Hindi)/BG Intro",
       "files": [
-        "76. Elements of Akarma 2 (01.12.20).mp3",
-        "77. The four types of karma phala (02.12.20).mp3",
         "78. Krsna is pleased when we chant His Holy name (03.12.20).mp3",
         "79. Hari nama sankirtana (04.12.20).mp3",
+        "8. Qualities of a speaker - 3 (25.09.20)d.mp3",
         "80. Surrendering to Krsna by chanting and hearing the Holy name (05.12.20).mp3",
-        "81. Q&A on Karma topic (06.12.20).mp3",
-        "Hare Krsna Kirtana.mp3"
+        "81. Q&A on Karma topic (06.12.20).mp3"
       ]
     },
     "institute_classes": {
@@ -78,6 +87,32 @@
         "Hare Krsna ... (20.02.17).mp3",
         "Hare Krsna Kirtana (26.02.22).mp3"
       ]
+    },
+    "ch_14_kirtans": {
+      "name": "Ch 14 kirtans",
+      "path": "./collections/ch_14_kirtans",
+      "files": [
+        "Gaurangera duti pada...(06_10_15) 1.mp3",
+        "Hare Krsna Kirtana (08_10_15) 1.mp3",
+        "Hari Hari viphale... 1.mp3",
+        "Hari he! Prapance podiya...(07_10_15) 1.mp3",
+        "Jaya Radha Madhava... (11_10_15) 1.mp3",
+        "Jaya Radha Madhava... (27_10_15) 1.mp3",
+        "Sri Krsna Caitanya Prabhu doya... 1.mp3",
+        "Udilo aruna puraba... 1.mp3",
+        "nana sastra vicaranaika... (07_10_15) 1.mp3"
+      ]
+    },
+    "test_limited_collection": {
+      "name": "Test Limited Collection",
+      "files": [
+        "file1.mp3",
+        "file2.mp3",
+        "file3.mp3",
+        "file4.mp3",
+        "file5.mp3"
+      ],
+      "fileLimit": 3
     }
   },
   "schedules": {
@@ -133,6 +168,24 @@
       "dateRange": {
         "startDate": null,
         "endDate": null
+      }
+    }
+  },
+  "userProgress": {
+    "e2c9e269-8976-4a63-9d1d-67789b4f5a86": {
+      "sample_audio_collection": {
+        "currentPosition": 1,
+        "lastAccessed": "2025-06-30T17:36:51.280Z"
+      },
+      "kirtans": {
+        "currentPosition": 1,
+        "lastAccessed": "2025-06-30T17:36:51.280Z"
+      }
+    },
+    "0e321b66-d0ba-4f68-a63f-1c4bba31be60": {
+      "sample_audio_collection": {
+        "currentPosition": 3,
+        "lastAccessed": "2025-06-30T17:40:01.405Z"
       }
     }
   }

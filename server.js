@@ -224,6 +224,8 @@ function createUser(userData) {
     
     config.users[userId] = user;
     config.userSchedules[userId] = [];
+    config.userProgress = config.userProgress || {};
+    config.userProgress[userId] = {};
     saveConfig();
     
     return user;
@@ -231,6 +233,33 @@ function createUser(userData) {
 
 function findUserByEmail(email) {
     return Object.values(config.users).find(user => user.email === email.toLowerCase());
+}
+
+function getUserProgress(userId, collectionId) {
+    config.userProgress = config.userProgress || {};
+    config.userProgress[userId] = config.userProgress[userId] || {};
+    
+    // Default progress: start at position 1
+    if (!config.userProgress[userId][collectionId]) {
+        config.userProgress[userId][collectionId] = {
+            currentPosition: 1,
+            lastAccessed: new Date().toISOString()
+        };
+    }
+    
+    return config.userProgress[userId][collectionId];
+}
+
+function updateUserProgress(userId, collectionId, newPosition) {
+    config.userProgress = config.userProgress || {};
+    config.userProgress[userId] = config.userProgress[userId] || {};
+    
+    config.userProgress[userId][collectionId] = {
+        currentPosition: newPosition,
+        lastAccessed: new Date().toISOString()
+    };
+    
+    saveConfig();
 }
 
 function getUserSchedules(userId) {
@@ -262,7 +291,15 @@ function getUserAvailableFiles(userId) {
     activeUserSchedules.forEach(schedule => {
         const collection = config.collections[schedule.collection];
         if (collection && collection.files) {
-            collection.files.forEach(file => {
+            // Get user's progress for this collection
+            const userProgress = getUserProgress(userId, schedule.collection);
+            const startIndex = Math.max(0, userProgress.currentPosition - 1); // Convert to 0-based index
+            
+            const filesToShow = collection.fileLimit && collection.fileLimit > 0 
+                ? collection.files.slice(startIndex, startIndex + collection.fileLimit)
+                : collection.files.slice(startIndex);
+            
+            filesToShow.forEach(file => {
                 if (!activeFiles.some(f => f.name === file)) {
                     activeFiles.push({
                         name: file,
@@ -303,7 +340,13 @@ function getActiveFiles() {
             
             if (collection && collection.files) {
                 console.log(`  Files in collection: ${collection.files.length}`);
-                collection.files.forEach(file => {
+                // For public access, show files from beginning up to limit
+                const filesToShow = collection.fileLimit && collection.fileLimit > 0 
+                    ? collection.files.slice(0, collection.fileLimit)
+                    : collection.files;
+                console.log(`  Files to show (limit: ${collection.fileLimit || 'none'}): ${filesToShow.length}`);
+                
+                filesToShow.forEach(file => {
                     if (!activeFiles.some(f => f.name === file)) {
                         console.log(`  ✅ Adding file: ${file}`);
                         activeFiles.push({
@@ -466,7 +509,41 @@ app.get('/user/schedules', authenticateToken, (req, res) => {
 
 app.get('/user/available-files', authenticateToken, (req, res) => {
     const files = getUserAvailableFiles(req.user.userId);
-    res.json({ audioFiles: files });
+    const userSchedules = getUserSchedules(req.user.userId);
+    const activeUserSchedules = userSchedules.filter(s => s.isActive);
+    
+    // Calculate progress information for each collection
+    const collectionsProgress = {};
+    activeUserSchedules.forEach(schedule => {
+        const collection = config.collections[schedule.collection];
+        if (collection && collection.files) {
+            // Get user's progress for this collection
+            const userProgress = getUserProgress(req.user.userId, schedule.collection);
+            const totalFiles = collection.files.length;
+            const startIndex = Math.max(0, userProgress.currentPosition - 1);
+            const endIndex = collection.fileLimit && collection.fileLimit > 0 
+                ? Math.min(startIndex + collection.fileLimit, totalFiles)
+                : totalFiles;
+            const visibleFiles = endIndex - startIndex;
+            const remainingFiles = totalFiles - endIndex;
+            const completedFiles = startIndex;
+            
+            collectionsProgress[schedule.collection] = {
+                name: collection.name,
+                totalFiles,
+                visibleFiles,
+                remainingFiles,
+                completedFiles,
+                currentPosition: userProgress.currentPosition,
+                hasLimit: collection.fileLimit > 0
+            };
+        }
+    });
+    
+    res.json({ 
+        audioFiles: files, 
+        collectionsProgress 
+    });
 });
 
 app.get('/user/stats', authenticateToken, (req, res) => {
@@ -478,6 +555,29 @@ app.get('/user/stats', authenticateToken, (req, res) => {
         totalSchedules: userSchedules.length,
         activeSchedules: activeSchedules.length,
         availableFiles: availableFiles.length
+    });
+});
+
+// User progress API endpoints
+app.get('/user/progress/:collectionId', authenticateToken, (req, res) => {
+    const { collectionId } = req.params;
+    const progress = getUserProgress(req.user.userId, collectionId);
+    res.json(progress);
+});
+
+app.post('/user/progress/:collectionId', authenticateToken, (req, res) => {
+    const { collectionId } = req.params;
+    const { newPosition } = req.body;
+    
+    if (!newPosition || newPosition < 1) {
+        return res.status(400).json({ error: 'Invalid position' });
+    }
+    
+    updateUserProgress(req.user.userId, collectionId, newPosition);
+    res.json({ 
+        success: true, 
+        message: 'Progress updated',
+        newPosition 
     });
 });
 
@@ -514,13 +614,14 @@ app.get('/admin/collections', authenticateAdmin, (req, res) => {
 });
 
 app.post('/admin/collections', authenticateAdmin, (req, res) => {
-    const { name, path, files } = req.body;
+    const { name, path, files, fileLimit } = req.body;
     const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
     
     config.collections[id] = {
         name,
         path,
-        files: files || []
+        files: files || [],
+        fileLimit: fileLimit || null
     };
     
     saveConfig();
@@ -529,7 +630,7 @@ app.post('/admin/collections', authenticateAdmin, (req, res) => {
 
 app.put('/admin/collections/:id', authenticateAdmin, (req, res) => {
     const { id } = req.params;
-    const { name, path, files } = req.body;
+    const { name, path, files, fileLimit } = req.body;
     
     if (!config.collections[id]) {
         return res.status(404).json({ error: 'Collection not found' });
@@ -538,7 +639,8 @@ app.put('/admin/collections/:id', authenticateAdmin, (req, res) => {
     config.collections[id] = {
         name,
         path,
-        files: files || []
+        files: files || [],
+        fileLimit: fileLimit || null
     };
     
     saveConfig();
@@ -710,6 +812,28 @@ app.post('/admin/settings', authenticateAdmin, (req, res) => {
 // Admin user management endpoints
 app.get('/admin/users', authenticateAdmin, (req, res) => {
     res.json(config.users || {});
+});
+
+app.get('/admin/user-progress/:userId', authenticateAdmin, (req, res) => {
+    const { userId } = req.params;
+    const userProgress = config.userProgress?.[userId] || {};
+    res.json(userProgress);
+});
+
+app.post('/admin/user-progress/:userId/:collectionId', authenticateAdmin, (req, res) => {
+    const { userId, collectionId } = req.params;
+    const { newPosition } = req.body;
+    
+    if (!newPosition || newPosition < 1) {
+        return res.status(400).json({ error: 'Invalid position' });
+    }
+    
+    updateUserProgress(userId, collectionId, newPosition);
+    res.json({ 
+        success: true, 
+        message: 'User progress updated',
+        newPosition 
+    });
 });
 
 app.post('/admin/users/assign-schedule', authenticateAdmin, (req, res) => {
@@ -990,7 +1114,36 @@ app.get(/.*\.(mp3|wav|m4a|aac)$/i, (req, res) => {
 // Public API endpoints
 app.get('/api/files', (req, res) => {
     const activeFiles = getActiveFiles();
-    res.json({ audioFiles: activeFiles });
+    
+    // Calculate progress information for all active collections
+    const collectionsProgress = {};
+    Object.entries(config.schedules).forEach(([scheduleId, schedule]) => {
+        if (schedule.enabled && isTimeInSchedule(schedule)) {
+            const collection = config.collections[schedule.collection];
+            if (collection && collection.files && !collectionsProgress[schedule.collection]) {
+                const totalFiles = collection.files.length;
+                const visibleFiles = collection.fileLimit && collection.fileLimit > 0 
+                    ? Math.min(collection.fileLimit, totalFiles)
+                    : totalFiles;
+                const remainingFiles = totalFiles - visibleFiles;
+                
+                collectionsProgress[schedule.collection] = {
+                    name: collection.name,
+                    totalFiles,
+                    visibleFiles,
+                    remainingFiles,
+                    completedFiles: 0,
+                    currentPosition: 1,
+                    hasLimit: collection.fileLimit > 0
+                };
+            }
+        }
+    });
+    
+    res.json({ 
+        audioFiles: activeFiles,
+        collectionsProgress 
+    });
 });
 
 // Connection test endpoint

@@ -4,3 +4,6 @@ collections/
 config.json
 node_modules/
 *.log
+resources/
+
+out/

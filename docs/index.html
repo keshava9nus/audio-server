@@ -226,7 +226,10 @@
     </div>
 
     <script>
-        const SERVER_URL = 'https://sleepy-thunder-45656.pktriot.net';
+        // Auto-detect server URL based on current location
+        const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:8000' 
+            : 'https://sleepy-thunder-45656.pktriot.net';
         
         // Check server status on load
         document.addEventListener('DOMContentLoaded', function() {

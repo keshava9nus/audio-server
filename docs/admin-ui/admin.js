@@ -1,5 +1,8 @@
 // Admin Panel JavaScript
-const API_BASE = 'https://sleepy-thunder-45656.pktriot.net';
+// Auto-detect API base URL based on current location
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+    ? 'http://localhost:8000' 
+    : 'https://sleepy-thunder-45656.pktriot.net';
 
 let config = {};
 let currentTab = 'dashboard';
@@ -361,8 +364,11 @@ function setupFormHandlers() {
         e.preventDefault();
         
         const name = document.getElementById('collection-name').value;
-        const path = document.getElementById('collection-path').value;
+        // Auto-generate path from collection name since files are manually selected
+        const path = `./collections/${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
         const files = getSelectedFiles();
+        const fileLimit = document.getElementById('collection-file-limit').value;
+        const fileLimitNumber = fileLimit ? parseInt(fileLimit) : null;
         const editingId = this.dataset.editingId;
         
         try {
@@ -371,7 +377,8 @@ function setupFormHandlers() {
                 await apiCall(`/admin/collections/${editingId}`, 'PUT', {
                     name,
                     path,
-                    files
+                    files,
+                    fileLimit: fileLimitNumber
                 });
                 showAlert('Collection updated successfully!', 'success');
                 cancelEditCollection();
@@ -380,7 +387,8 @@ function setupFormHandlers() {
                 await apiCall('/admin/collections', 'POST', {
                     name,
                     path,
-                    files
+                    files,
+                    fileLimit: fileLimitNumber
                 });
                 showAlert('Collection created successfully!', 'success');
                 this.reset();
@@ -760,7 +768,7 @@ async function editCollection(collectionId) {
         
         // Populate form with existing data
         document.getElementById('collection-name').value = collection.name;
-        document.getElementById('collection-path').value = collection.path;
+        document.getElementById('collection-file-limit').value = collection.fileLimit || '';
         
         // Change form to edit mode
         const form = document.getElementById('collection-form');

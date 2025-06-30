@@ -359,8 +359,11 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="collection-path">Folder Path</label>
-                        <input type="text" id="collection-path" placeholder="./collections/my-collection" required>
+                        <label for="collection-file-limit">File Limit (leave empty for no limit)</label>
+                        <input type="number" id="collection-file-limit" placeholder="e.g., 5" min="1" max="100">
+                        <small style="color: #666; display: block; margin-top: 5px;">
+                            Limits how many files users can see at once. Remaining files will be shown as count.
+                        </small>
                     </div>
                     
                     <button type="submit" class="btn btn-primary">Create Collection</button>

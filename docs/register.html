@@ -185,7 +185,10 @@
     </div>
 
     <script>
-        const API_BASE_URL = 'https://sleepy-thunder-45656.pktriot.net';
+        // Auto-detect API base URL based on current location
+        const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:8000' 
+            : 'https://sleepy-thunder-45656.pktriot.net';
         
         document.getElementById('register-form').addEventListener('submit', async function(e) {
             e.preventDefault();
