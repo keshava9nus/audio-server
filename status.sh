@@ -38,5 +38,5 @@ fi
 
 echo ""
 echo "🌐 Your websites:"
-echo "   GitHub Pages: https://shivin9.github.io/tunnel_test"
+echo "   GitHub Pages: https://keshava9nus.github.io/tunnel_test"
 echo "   Admin Login:  Use password 'HareKrishna'"

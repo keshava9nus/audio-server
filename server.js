@@ -16,7 +16,7 @@ const ADMIN_UI_DIR = path.join(__dirname, 'docs/admin-ui');
 app.use(express.json());
 app.use(cors({
     origin: [
-        'https://shivin9.github.io', 
+        'https://keshava9nus.github.io', 
         'http://localhost:3000', 
         'http://127.0.0.1:3000',
         'http://localhost:8080',
