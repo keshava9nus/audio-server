@@ -1,0 +1,6 @@
+pktriot/
+audio/
+collections/
+config.json
+node_modules/
+*.log
