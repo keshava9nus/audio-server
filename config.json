@@ -21,15 +21,31 @@
       "verified": false,
       "createdAt": "2025-06-29T15:21:54.086Z",
       "schedules": []
+    },
+    "6c723882-487c-4978-bfc4-712a03d45c19": {
+      "id": "6c723882-487c-4978-bfc4-712a03d45c19",
+      "name": "Test",
+      "email": "test@gmail.com",
+      "password": "$2b$10$HtnAmLRSwnPiteM9eWDok.FU56diSifVy/wYk/t7nq6JWXlaiUdPm",
+      "verified": false,
+      "createdAt": "2025-06-30T06:08:32.332Z",
+      "schedules": []
     }
   },
   "userSchedules": {
     "e2c9e269-8976-4a63-9d1d-67789b4f5a86": [
-      "always_active_test_schedule"
+      "always_active_test_schedule",
+      "kirtans"
+    ],
+    "6c723882-487c-4978-bfc4-712a03d45c19": [
+      "geetika_didi_schedule",
+      "kirtans"
     ]
   },
   "activeSchedules": [
-    "always_active_test_schedule"
+    "always_active_test_schedule",
+    "geetika_didi_schedule",
+    "kirtans"
   ],
   "collections": {
     "sample_audio_collection": {
@@ -44,12 +60,66 @@
         "81. Q&A on Karma topic (06.12.20).mp3",
         "Hare Krsna Kirtana.mp3"
       ]
+    },
+    "institute_classes": {
+      "name": "Institute Classes",
+      "path": "/Users/shivin/GV/Classes/Institute Class",
+      "files": [
+        "14.20170227d.m4a",
+        "15.20170301.m4a",
+        "16. 20170303.m4a",
+        "17.20170315.m4a"
+      ]
+    },
+    "kirtans": {
+      "name": "Kirtans",
+      "path": "/Users/shivin/GV/Classes/Bhagavad Gītā - Overview (Sep-Dec 2020) (Hindi)",
+      "files": [
+        "Hare Krsna ... (20.02.17).mp3",
+        "Hare Krsna Kirtana (26.02.22).mp3"
+      ]
     }
   },
   "schedules": {
     "always_active_test_schedule": {
       "name": "Always Active Test Schedule",
       "collection": "sample_audio_collection",
+      "enabled": true,
+      "timeSlots": [
+        {
+          "id": "slot1",
+          "dayOfWeek": "*",
+          "startTime": "00:00",
+          "endTime": "23:59",
+          "timezone": "Asia/Kolkata"
+        }
+      ],
+      "dateRange": {
+        "startDate": null,
+        "endDate": null
+      }
+    },
+    "geetika_didi_schedule": {
+      "name": "Geetika Didi schedule",
+      "collection": "institute_classes",
+      "enabled": true,
+      "timeSlots": [
+        {
+          "id": "slot1",
+          "dayOfWeek": "*",
+          "startTime": "11:30",
+          "endTime": "12:30",
+          "timezone": "Asia/Kolkata"
+        }
+      ],
+      "dateRange": {
+        "startDate": null,
+        "endDate": null
+      }
+    },
+    "kirtans": {
+      "name": "Kirtans",
+      "collection": "kirtans",
       "enabled": true,
       "timeSlots": [
         {
