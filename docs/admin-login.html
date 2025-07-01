@@ -243,7 +243,7 @@
                     ? 'http://localhost:8000' 
                     : 'https://sleepy-thunder-45656.pktriot.net';
                 
-                const response = await fetch(`${API_BASE_URL}/admin/authenticate`, {
+                const response = await fetch(`${API_BASE_URL}/admin/login`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

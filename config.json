@@ -22,9 +22,9 @@
       "isActive": true,
       "createdAt": "2025-07-01T00:00:00.000Z",
       "stats": {
-        "totalStudents": 3,
-        "activeStudents": 3,
-        "registrationsThisMonth": 3
+        "totalStudents": 5,
+        "activeStudents": 5,
+        "registrationsThisMonth": 5
       }
     },
     "admin-1751368322048": {
@@ -44,17 +44,6 @@
     }
   },
   "students": {
-    "e2c9e269-8976-4a63-9d1d-67789b4f5a86": {
-      "studentId": "e2c9e269-8976-4a63-9d1d-67789b4f5a86",
-      "adminId": "admin-default",
-      "name": "Guest",
-      "email": "a@b.com",
-      "password": "$2b$10$AmH8l5M4/oauTy1Cic8h8eWlfmLML8DK8pIKBeO18B6DizCmX3xdC",
-      "joinedViaInvite": "MIGRATED",
-      "isActive": true,
-      "createdAt": "2025-06-29T15:21:54.086Z",
-      "lastLogin": null
-    },
     "6c723882-487c-4978-bfc4-712a03d45c19": {
       "studentId": "6c723882-487c-4978-bfc4-712a03d45c19",
       "adminId": "admin-default",
@@ -87,6 +76,28 @@
       "isActive": true,
       "createdAt": "2025-07-01T11:12:19.312Z",
       "lastLogin": "2025-07-01T11:12:30.336Z"
+    },
+    "student-1751370595752": {
+      "studentId": "student-1751370595752",
+      "adminId": "admin-default",
+      "name": "Test",
+      "email": "a@b.com",
+      "password": "$2b$10$msQXQ3L.BqEzdpKX9gevNuDi2g8hAFgsDKpnHK2CQskUCr074DIPC",
+      "joinedViaInvite": "AUDIO2024",
+      "isActive": true,
+      "createdAt": "2025-07-01T11:49:55.823Z",
+      "lastLogin": null
+    },
+    "student-1751370650965": {
+      "studentId": "student-1751370650965",
+      "adminId": "admin-default",
+      "name": "Brijendra Srivastava",
+      "email": "bns@gmail.com",
+      "password": "$2b$10$vd1.R6wjdpqEYSctsIpzXugMeihpflrKri5BtqaL0kgHfSw0DKq0G",
+      "joinedViaInvite": "AUDIO2024",
+      "isActive": true,
+      "createdAt": "2025-07-01T11:50:51.036Z",
+      "lastLogin": "2025-07-01T12:04:04.309Z"
     }
   },
   "collections": {
@@ -253,7 +264,9 @@
         "lastAccessed": "2025-06-30T17:40:01.405Z"
       }
     },
-    "student-1751368339237": {}
+    "student-1751368339237": {},
+    "student-1751370595752": {},
+    "student-1751370650965": {}
   },
   "activeSchedules": [
     "always_active_test_schedule",

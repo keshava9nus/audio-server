@@ -288,7 +288,45 @@
                 <div id="admins-tab" class="tab-content active">
                     <div class="section-header">
                         <h2>System Administrators</h2>
+                        <button class="btn btn-success" onclick="showAddAdminForm()">Add New Admin</button>
                     </div>
+                    
+                    <!-- Add Admin Form (initially hidden) -->
+                    <div id="add-admin-form" style="display: none; background: #f8f9fa; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                        <h3 style="margin-bottom: 1rem;">Add New Administrator</h3>
+                        <form id="admin-form">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Full Name</label>
+                                    <input type="text" id="admin-name" required style="width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Email Address</label>
+                                    <input type="email" id="admin-email" required style="width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+                                </div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                                <div>
+                                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Password</label>
+                                    <input type="password" id="admin-password" required style="width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+                                </div>
+                                <div>
+                                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Institute Name</label>
+                                    <input type="text" id="admin-institute" required style="width: 100%; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px;">
+                                </div>
+                            </div>
+                            <div style="margin-bottom: 1rem;">
+                                <label style="display: block; margin-bottom: 0.5rem; font-weight: 600;">Custom Invite Code (Optional)</label>
+                                <input type="text" id="admin-invite-code" placeholder="Leave blank to auto-generate" style="width: 300px; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px; text-transform: uppercase;">
+                                <small style="color: #718096; display: block; margin-top: 0.25rem;">Students will use this code to register under this admin</small>
+                            </div>
+                            <div style="display: flex; gap: 1rem;">
+                                <button type="submit" class="btn btn-success">Create Admin</button>
+                                <button type="button" class="btn btn-outline" onclick="hideAddAdminForm()">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+
                     <div id="admins-table"></div>
                 </div>
 
@@ -645,8 +683,89 @@
             }
         }
 
-        // Load dashboard on page load
-        document.addEventListener('DOMContentLoaded', loadDashboard);
+        function showAddAdminForm() {
+            document.getElementById('add-admin-form').style.display = 'block';
+        }
+
+        function hideAddAdminForm() {
+            document.getElementById('add-admin-form').style.display = 'none';
+            document.getElementById('admin-form').reset();
+        }
+
+        // Auto-format invite code to uppercase
+        document.addEventListener('DOMContentLoaded', function() {
+            const inviteCodeField = document.getElementById('admin-invite-code');
+            if (inviteCodeField) {
+                inviteCodeField.addEventListener('input', function(e) {
+                    e.target.value = e.target.value.toUpperCase();
+                });
+            }
+
+            // Handle admin form submission
+            const adminForm = document.getElementById('admin-form');
+            if (adminForm) {
+                adminForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    await createAdmin();
+                });
+            }
+
+            loadDashboard();
+        });
+
+        async function createAdmin() {
+            const name = document.getElementById('admin-name').value;
+            const email = document.getElementById('admin-email').value;
+            const password = document.getElementById('admin-password').value;
+            const instituteName = document.getElementById('admin-institute').value;
+            const inviteCode = document.getElementById('admin-invite-code').value.trim();
+
+            const submitBtn = document.querySelector('#admin-form button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating...';
+
+            try {
+                const requestData = {
+                    name,
+                    email,
+                    password,
+                    instituteName
+                };
+
+                if (inviteCode) {
+                    requestData.inviteCode = inviteCode;
+                }
+
+                const response = await fetch(`${SERVER_URL}/admin/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showError(`Admin created successfully! Invite code: ${result.admin.inviteCode}`);
+                    hideAddAdminForm();
+                    // Reload admins table
+                    await loadAdmins();
+                    // Update stats
+                    await loadDashboard();
+                } else {
+                    showError(result.message || 'Failed to create admin');
+                }
+            } catch (error) {
+                console.error('Failed to create admin:', error);
+                showError('Failed to create admin. Please try again.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        }
+
     </script>
 </body>
 </html>

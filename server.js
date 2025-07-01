@@ -239,6 +239,14 @@ function createStudent(studentData, adminId) {
     
     // Update admin stats
     if (config.admins[adminId]) {
+        // Ensure admin has stats object
+        if (!config.admins[adminId].stats) {
+            config.admins[adminId].stats = {
+                totalStudents: 0,
+                activeStudents: 0,
+                registrationsThisMonth: 0
+            };
+        }
         config.admins[adminId].stats.totalStudents++;
         config.admins[adminId].stats.activeStudents++;
         config.admins[adminId].stats.registrationsThisMonth++;
@@ -522,39 +530,42 @@ function createUser(userData) {
         schedules: []
     };
     
-    config.users[userId] = user;
-    config.userSchedules[userId] = [];
-    config.userProgress = config.userProgress || {};
-    config.userProgress[userId] = {};
+    config.students[userId] = user;
+    config.studentSchedules[userId] = [];
+    config.studentProgress = config.studentProgress || {};
+    config.studentProgress[userId] = {};
     saveConfig();
     
     return user;
 }
 
 function findUserByEmail(email) {
-    return Object.values(config.users).find(user => user.email === email.toLowerCase());
+    if (!config.students) {
+        return null;
+    }
+    return Object.values(config.students).find(student => student.email === email.toLowerCase());
 }
 
 function getUserProgress(userId, collectionId) {
-    config.userProgress = config.userProgress || {};
-    config.userProgress[userId] = config.userProgress[userId] || {};
+    config.studentProgress = config.studentProgress || {};
+    config.studentProgress[userId] = config.studentProgress[userId] || {};
     
     // Default progress: start at position 1
-    if (!config.userProgress[userId][collectionId]) {
-        config.userProgress[userId][collectionId] = {
+    if (!config.studentProgress[userId][collectionId]) {
+        config.studentProgress[userId][collectionId] = {
             currentPosition: 1,
             lastAccessed: new Date().toISOString()
         };
     }
     
-    return config.userProgress[userId][collectionId];
+    return config.studentProgress[userId][collectionId];
 }
 
 function updateUserProgress(userId, collectionId, newPosition) {
-    config.userProgress = config.userProgress || {};
-    config.userProgress[userId] = config.userProgress[userId] || {};
+    config.studentProgress = config.studentProgress || {};
+    config.studentProgress[userId] = config.studentProgress[userId] || {};
     
-    config.userProgress[userId][collectionId] = {
+    config.studentProgress[userId][collectionId] = {
         currentPosition: newPosition,
         lastAccessed: new Date().toISOString()
     };
@@ -563,7 +574,7 @@ function updateUserProgress(userId, collectionId, newPosition) {
 }
 
 function getUserSchedules(userId) {
-    const userSchedules = config.userSchedules[userId] || [];
+    const userSchedules = config.studentSchedules[userId] || [];
     const currentTime = new Date();
     
     return userSchedules.map(scheduleId => {
@@ -956,7 +967,7 @@ app.post('/auth/login', async (req, res) => {
 });
 
 app.get('/auth/me', authenticateToken, (req, res) => {
-    const user = config.users[req.user.userId];
+    const user = config.students[req.user.userId];
     if (!user) {
         return res.status(404).json({ error: 'User not found' });
     }
@@ -1360,13 +1371,23 @@ app.get('/admin/status', authenticateAdmin, (req, res) => {
     
     const adminData = config.admins[adminId];
     
+    // Ensure admin has stats object
+    if (!adminData.stats) {
+        adminData.stats = {
+            totalStudents: 0,
+            activeStudents: 0,
+            registrationsThisMonth: 0
+        };
+        saveConfig(); // Save the updated config
+    }
+    
     res.json({
         serverTime: new Date().toISOString(),
         timezone: config.systemSettings.timezone,
         activeSchedules,
         totalCollections: getAdminCollections(adminId).length,
         totalSchedules: adminSchedules.length,
-        totalStudents: adminData.stats.totalStudents,
+        totalStudents: adminData.stats.totalStudents || 0,
         instituteName: adminData.instituteName
     });
 });
@@ -1648,12 +1669,12 @@ app.post('/admin/settings', authenticateAdmin, (req, res) => {
 
 // Admin user management endpoints
 app.get('/admin/users', authenticateAdmin, (req, res) => {
-    res.json(config.users || {});
+    res.json(config.students || {});
 });
 
 app.get('/admin/user-progress/:userId', authenticateAdmin, (req, res) => {
     const { userId } = req.params;
-    const userProgress = config.userProgress?.[userId] || {};
+    const userProgress = config.studentProgress?.[userId] || {};
     res.json(userProgress);
 });
 
@@ -1676,7 +1697,7 @@ app.post('/admin/user-progress/:userId/:collectionId', authenticateAdmin, (req, 
 app.post('/admin/users/assign-schedule', authenticateAdmin, (req, res) => {
     const { userId, scheduleId } = req.body;
     
-    if (!config.users[userId]) {
+    if (!config.students[userId]) {
         return res.status(404).json({ error: 'User not found' });
     }
     
@@ -1685,15 +1706,15 @@ app.post('/admin/users/assign-schedule', authenticateAdmin, (req, res) => {
     }
     
     // Initialize user schedules if needed
-    if (!config.userSchedules[userId]) {
-        config.userSchedules[userId] = [];
+    if (!config.studentSchedules[userId]) {
+        config.studentSchedules[userId] = [];
     }
     
     // Add schedule if not already assigned
-    if (!config.userSchedules[userId].includes(scheduleId)) {
-        config.userSchedules[userId].push(scheduleId);
+    if (!config.studentSchedules[userId].includes(scheduleId)) {
+        config.studentSchedules[userId].push(scheduleId);
         saveConfig();
-        console.log(`✅ Assigned schedule "${scheduleId}" to user "${config.users[userId].name}"`);
+        console.log(`✅ Assigned schedule "${scheduleId}" to user "${config.students[userId].name}"`);
     }
     
     res.json({ success: true });
@@ -1702,15 +1723,15 @@ app.post('/admin/users/assign-schedule', authenticateAdmin, (req, res) => {
 app.post('/admin/users/remove-schedules', authenticateAdmin, (req, res) => {
     const { userId } = req.body;
     
-    if (!config.users[userId]) {
+    if (!config.students[userId]) {
         return res.status(404).json({ error: 'User not found' });
     }
     
     // Remove all schedules for this user
-    config.userSchedules[userId] = [];
+    config.studentSchedules[userId] = [];
     saveConfig();
     
-    console.log(`✅ Removed all schedules from user "${config.users[userId].name}"`);
+    console.log(`✅ Removed all schedules from user "${config.students[userId].name}"`);
     res.json({ success: true });
 });
 
