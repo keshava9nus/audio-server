@@ -1371,6 +1371,11 @@ app.get('/admin/status', authenticateAdmin, (req, res) => {
     
     const adminData = config.admins[adminId];
     
+    // Check if admin exists
+    if (!adminData) {
+        return res.status(404).json({ error: 'Admin not found' });
+    }
+    
     // Ensure admin has stats object
     if (!adminData.stats) {
         adminData.stats = {
