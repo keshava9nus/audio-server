@@ -41,6 +41,21 @@
         "activeStudents": 1,
         "registrationsThisMonth": 1
       }
+    },
+    "admin-1751371686321": {
+      "adminId": "admin-1751371686321",
+      "name": "Shivin",
+      "email": "shivin.srivastava@gmail.com",
+      "password": "$2b$10$/7gTngNSgvfWkuRKyqOPcuWrhPuqOdoeidFtLnQU4sWDRKBG0HsbS",
+      "instituteName": "BITS",
+      "inviteCode": "SHIVIN",
+      "isActive": true,
+      "createdAt": "2025-07-01T12:08:06.395Z",
+      "stats": {
+        "totalStudents": 0,
+        "activeStudents": 0,
+        "registrationsThisMonth": 0
+      }
     }
   },
   "students": {
@@ -97,7 +112,7 @@
       "joinedViaInvite": "AUDIO2024",
       "isActive": true,
       "createdAt": "2025-07-01T11:50:51.036Z",
-      "lastLogin": "2025-07-01T12:04:04.309Z"
+      "lastLogin": "2025-07-01T12:09:55.326Z"
     }
   },
   "collections": {

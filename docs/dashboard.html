@@ -237,10 +237,22 @@
 
         async function loadDashboard() {
             try {
-                // Get user info
-                const userResponse = await apiCall('/auth/me');
-                currentUser = userResponse.user;
-                document.getElementById('user-name').textContent = currentUser.name;
+                // Get user info from token
+                const token = localStorage.getItem('authToken');
+                if (token) {
+                    try {
+                        const payload = JSON.parse(atob(token.split('.')[1]));
+                        currentUser = { name: payload.name, email: payload.email };
+                        document.getElementById('user-name').textContent = currentUser.name;
+                    } catch (e) {
+                        console.error('Failed to parse token:', e);
+                        logout();
+                        return;
+                    }
+                } else {
+                    logout();
+                    return;
+                }
 
                 // Load user-specific data
                 await Promise.all([
@@ -259,7 +271,7 @@
 
         async function loadUserSchedules() {
             try {
-                const schedules = await apiCall('/user/schedules');
+                const schedules = await apiCall('/student/schedules');
                 displayUserSchedules(schedules);
             } catch (error) {
                 document.getElementById('user-schedules').innerHTML = '<p>Error loading schedules</p>';
@@ -268,7 +280,7 @@
 
         async function loadAvailableFiles() {
             try {
-                const files = await apiCall('/user/available-files');
+                const files = await apiCall('/student/available-files');
                 displayAvailableFiles(files.audioFiles || []);
             } catch (error) {
                 document.getElementById('audio-files').innerHTML = '<p>Error loading files</p>';
@@ -277,7 +289,7 @@
 
         async function updateStats() {
             try {
-                const stats = await apiCall('/user/stats');
+                const stats = await apiCall('/student/stats');
                 document.getElementById('total-schedules').textContent = stats.totalSchedules || 0;
                 document.getElementById('active-schedules').textContent = stats.activeSchedules || 0;
                 document.getElementById('available-files').textContent = stats.availableFiles || 0;
@@ -384,11 +396,12 @@
         }
 
         async function apiCall(endpoint, method = 'GET', data = null) {
+            const token = localStorage.getItem('authToken');
             const options = {
                 method,
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${userToken}`
+                    'Authorization': `Bearer ${token}`
                 },
                 credentials: 'include'
             };
