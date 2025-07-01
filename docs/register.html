@@ -147,8 +147,8 @@
 <body>
     <div class="auth-container">
         <div class="auth-header">
-            <h1>🎵 Register</h1>
-            <p>Create your audio server account</p>
+            <h1>🎓 Student Registration</h1>
+            <p>Join your institute's audio server</p>
         </div>
 
         <div id="alert" class="alert"></div>
@@ -156,26 +156,34 @@
 
         <form id="register-form">
             <div class="form-group">
+                <label for="inviteCode">Institute Invite Code</label>
+                <input type="text" id="inviteCode" required placeholder="Enter the invite code from your administrator" style="text-transform: uppercase;">
+                <small style="color: #718096; font-size: 0.9em; display: block; margin-top: 5px;">
+                    Get this code from your institute administrator
+                </small>
+            </div>
+
+            <div class="form-group">
                 <label for="name">Full Name</label>
-                <input type="text" id="name" required>
+                <input type="text" id="name" required placeholder="Your full name">
             </div>
 
             <div class="form-group">
                 <label for="email">Email Address</label>
-                <input type="email" id="email" required>
+                <input type="email" id="email" required placeholder="your.email@example.com">
             </div>
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" required minlength="6">
+                <input type="password" id="password" required minlength="6" placeholder="Create a secure password">
             </div>
 
             <div class="form-group">
                 <label for="confirm-password">Confirm Password</label>
-                <input type="password" id="confirm-password" required minlength="6">
+                <input type="password" id="confirm-password" required minlength="6" placeholder="Confirm your password">
             </div>
 
-            <button type="submit" class="btn btn-primary">Create Account</button>
+            <button type="submit" class="btn btn-primary">Create Student Account</button>
         </form>
 
         <div class="form-links">
@@ -190,9 +198,15 @@
             ? 'http://localhost:8000' 
             : 'https://sleepy-thunder-45656.pktriot.net';
         
+        // Auto-format invite code to uppercase
+        document.getElementById('inviteCode').addEventListener('input', function(e) {
+            e.target.value = e.target.value.toUpperCase();
+        });
+
         document.getElementById('register-form').addEventListener('submit', async function(e) {
             e.preventDefault();
             
+            const inviteCode = document.getElementById('inviteCode').value;
             const name = document.getElementById('name').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
@@ -203,31 +217,42 @@
                 showAlert('Passwords do not match', 'error');
                 return;
             }
+
+            // Validate invite code
+            if (!inviteCode.trim()) {
+                showAlert('Please enter an invite code', 'error');
+                return;
+            }
             
             showLoading(true);
             
             try {
-                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                const response = await fetch(`${API_BASE_URL}/student/register`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     credentials: 'include',
-                    body: JSON.stringify({ name, email, password })
+                    body: JSON.stringify({ 
+                        name, 
+                        email, 
+                        password, 
+                        inviteCode: inviteCode.trim() 
+                    })
                 });
                 
                 const result = await response.json();
                 
-                if (response.ok) {
-                    showAlert('Account created successfully! Please check your email for verification.', 'success');
+                if (response.ok && result.success) {
+                    showAlert('Student account created successfully! You can now sign in.', 'success');
                     setTimeout(() => {
                         window.location.href = 'login.html';
                     }, 2000);
                 } else {
-                    showAlert(result.error || 'Registration failed', 'error');
+                    showAlert(result.message || 'Registration failed', 'error');
                 }
             } catch (error) {
-                showAlert('Registration failed. Please try again.', 'error');
+                showAlert('Registration failed. Please check if the server is running.', 'error');
             }
             
             showLoading(false);

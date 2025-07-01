@@ -47,12 +47,11 @@ function loadConfig() {
             const configData = fs.readFileSync(CONFIG_FILE, 'utf8');
             config = JSON.parse(configData);
         } else {
-            // Default configuration
+            // Default multi-admin configuration
             config = {
-                settings: {
+                systemSettings: {
                     timezone: "Asia/Kolkata",
-                    adminPassword: "admin123",
-                    defaultCollectionPath: "./collections",
+                    superAdminPassword: "admin123",
                     jwtSecret: "your-secret-key-change-this",
                     emailEnabled: false,
                     smtpSettings: {
@@ -62,17 +61,26 @@ function loadConfig() {
                         password: ""
                     }
                 },
-                users: {},
-                userSchedules: {},
-                activeSchedules: [],
+                admins: {},
+                students: {},
                 collections: {},
-                schedules: {}
+                schedules: {},
+                studentSchedules: {},
+                studentProgress: {}
             };
             saveConfig();
         }
     } catch (error) {
         console.error('Error loading config:', error);
-        config = { settings: {}, collections: {}, schedules: {}, activeSchedules: [] };
+        config = { 
+            systemSettings: {}, 
+            admins: {}, 
+            students: {}, 
+            collections: {}, 
+            schedules: {},
+            studentSchedules: {},
+            studentProgress: {}
+        };
     }
 }
 
@@ -87,7 +95,7 @@ function saveConfig() {
 // Time and scheduling utilities
 function isTimeInSchedule(schedule) {
     const now = new Date();
-    const timezone = schedule.timeSlots[0]?.timezone || config.settings.timezone || 'Asia/Kolkata';
+    const timezone = schedule.timeSlots[0]?.timezone || config.systemSettings.timezone || 'Asia/Kolkata';
     
     try {
         // Get current time in the specified timezone
@@ -156,6 +164,222 @@ function timeToMinutes(timeString) {
     return hours * 60 + minutes;
 }
 
+// Multi-admin helper functions
+function isValidInviteCode(code) {
+    return /^[A-Z0-9]{6,12}$/.test(code);
+}
+
+function isInviteCodeAvailable(inviteCode) {
+    return !Object.values(config.admins).find(
+        admin => admin.inviteCode === inviteCode
+    );
+}
+
+function findAdminByInviteCode(inviteCode) {
+    return Object.values(config.admins).find(
+        admin => admin.inviteCode === inviteCode && admin.isActive
+    );
+}
+
+function findAdminByEmail(email) {
+    return Object.values(config.admins).find(
+        admin => admin.email === email.toLowerCase()
+    );
+}
+
+function findStudentByEmail(email) {
+    return Object.values(config.students).find(
+        student => student.email === email.toLowerCase()
+    );
+}
+
+function createAdmin(adminData) {
+    const adminId = `admin-${Date.now()}`;
+    const hashedPassword = bcrypt.hashSync(adminData.password, 10);
+    
+    const admin = {
+        adminId,
+        name: adminData.name,
+        email: adminData.email.toLowerCase(),
+        password: hashedPassword,
+        instituteName: adminData.instituteName,
+        inviteCode: adminData.inviteCode,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        stats: {
+            totalStudents: 0,
+            activeStudents: 0,
+            registrationsThisMonth: 0
+        }
+    };
+    
+    config.admins[adminId] = admin;
+    saveConfig();
+    return admin;
+}
+
+function createStudent(studentData, adminId) {
+    const studentId = `student-${Date.now()}`;
+    const hashedPassword = bcrypt.hashSync(studentData.password, 10);
+    
+    const student = {
+        studentId,
+        adminId,
+        name: studentData.name,
+        email: studentData.email.toLowerCase(),
+        password: hashedPassword,
+        joinedViaInvite: studentData.inviteCode,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        lastLogin: null
+    };
+    
+    config.students[studentId] = student;
+    config.studentProgress[studentId] = {};
+    
+    // Update admin stats
+    if (config.admins[adminId]) {
+        config.admins[adminId].stats.totalStudents++;
+        config.admins[adminId].stats.activeStudents++;
+        config.admins[adminId].stats.registrationsThisMonth++;
+    }
+    
+    saveConfig();
+    return student;
+}
+
+function generateStudentToken(student) {
+    return jwt.sign(
+        { 
+            studentId: student.studentId, 
+            adminId: student.adminId,
+            email: student.email, 
+            name: student.name,
+            role: 'student'
+        },
+        config.systemSettings.jwtSecret,
+        { expiresIn: '7d' }
+    );
+}
+
+function generateAdminToken(admin) {
+    return jwt.sign(
+        { 
+            adminId: admin.adminId,
+            email: admin.email, 
+            name: admin.name,
+            role: 'admin'
+        },
+        config.systemSettings.jwtSecret,
+        { expiresIn: '24h' }
+    );
+}
+
+function getAdminCollections(adminId) {
+    return Object.values(config.collections).filter(
+        collection => collection.adminId === adminId
+    );
+}
+
+function getAdminSchedules(adminId) {
+    return Object.values(config.schedules).filter(
+        schedule => schedule.adminId === adminId
+    );
+}
+
+function getAdminStudents(adminId) {
+    return Object.values(config.students).filter(
+        student => student.adminId === adminId && student.isActive
+    );
+}
+
+// Student helper functions
+function getStudentSchedules(studentId) {
+    const student = config.students[studentId];
+    if (!student) return [];
+    
+    const studentScheduleIds = config.studentSchedules[studentId] || [];
+    const currentTime = new Date();
+    
+    return studentScheduleIds.map(scheduleId => {
+        const schedule = config.schedules[scheduleId];
+        if (!schedule || schedule.adminId !== student.adminId) return null;
+        
+        return {
+            id: scheduleId,
+            name: schedule.name,
+            collection: schedule.collectionId,
+            enabled: schedule.enabled,
+            dayOfWeek: schedule.timeSlots[0]?.dayOfWeek || '*',
+            startTime: schedule.timeSlots[0]?.startTime || '',
+            endTime: schedule.timeSlots[0]?.endTime || '',
+            isActive: schedule.enabled && isTimeInSchedule(schedule)
+        };
+    }).filter(s => s !== null);
+}
+
+function getStudentAvailableFiles(studentId) {
+    const student = config.students[studentId];
+    if (!student) return [];
+    
+    const studentSchedules = getStudentSchedules(studentId);
+    const activeStudentSchedules = studentSchedules.filter(s => s.isActive);
+    const activeFiles = [];
+    
+    activeStudentSchedules.forEach(schedule => {
+        const collection = config.collections[schedule.collection];
+        if (collection && collection.files && collection.adminId === student.adminId) {
+            // Get student's progress for this collection
+            const studentProgress = getStudentProgress(studentId, schedule.collection);
+            const startIndex = Math.max(0, studentProgress.currentPosition - 1); // Convert to 0-based index
+            
+            const filesToShow = collection.fileLimit && collection.fileLimit > 0 
+                ? collection.files.slice(startIndex, startIndex + collection.fileLimit)
+                : collection.files.slice(startIndex);
+            
+            filesToShow.forEach(file => {
+                if (!activeFiles.some(f => f.name === file)) {
+                    activeFiles.push({
+                        name: file,
+                        url: `/${encodeURIComponent(file)}`,
+                        collection: schedule.collection,
+                        schedule: schedule.id
+                    });
+                }
+            });
+        }
+    });
+    
+    return activeFiles;
+}
+
+function getStudentProgress(studentId, collectionId) {
+    config.studentProgress = config.studentProgress || {};
+    config.studentProgress[studentId] = config.studentProgress[studentId] || {};
+    
+    // Default progress: start at position 1
+    if (!config.studentProgress[studentId][collectionId]) {
+        config.studentProgress[studentId][collectionId] = {
+            currentPosition: 1,
+            lastAccessed: new Date().toISOString()
+        };
+    }
+    
+    return config.studentProgress[studentId][collectionId];
+}
+
+function updateStudentProgress(studentId, collectionId, newPosition) {
+    config.studentProgress = config.studentProgress || {};
+    config.studentProgress[studentId] = config.studentProgress[studentId] || {};
+    
+    config.studentProgress[studentId][collectionId] = {
+        currentPosition: newPosition,
+        lastAccessed: new Date().toISOString()
+    };
+    
+    saveConfig();
+}
+
 // Authentication middleware
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
@@ -165,11 +389,34 @@ function authenticateToken(req, res, next) {
         return res.status(401).json({ error: 'Access token required' });
     }
 
-    jwt.verify(token, config.settings.jwtSecret, (err, user) => {
+    jwt.verify(token, config.systemSettings.jwtSecret, (err, decoded) => {
         if (err) {
             return res.status(403).json({ error: 'Invalid or expired token' });
         }
-        req.user = user;
+        req.user = decoded;
+        next();
+    });
+}
+
+// Student authentication middleware
+function authenticateStudent(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Student authentication required' });
+    }
+
+    jwt.verify(token, config.systemSettings.jwtSecret, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ error: 'Invalid or expired student token' });
+        }
+        
+        if (decoded.role !== 'student') {
+            return res.status(403).json({ error: 'Student access required' });
+        }
+        
+        req.student = decoded;
         next();
     });
 }
@@ -183,7 +430,7 @@ function authenticateAdmin(req, res, next) {
         return res.status(401).json({ error: 'Admin authentication required' });
     }
 
-    jwt.verify(token, config.settings.jwtSecret, (err, decoded) => {
+    jwt.verify(token, config.systemSettings.jwtSecret, (err, decoded) => {
         if (err) {
             return res.status(403).json({ error: 'Invalid or expired admin token' });
         }
@@ -198,11 +445,64 @@ function authenticateAdmin(req, res, next) {
     });
 }
 
+// Super-Admin authentication middleware
+function authenticateSuperAdmin(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Super-admin authentication required' });
+    }
+
+    jwt.verify(token, config.systemSettings.jwtSecret, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ error: 'Invalid or expired super-admin token' });
+        }
+        
+        // Check if it's a super-admin token
+        if (decoded.role !== 'super-admin') {
+            return res.status(403).json({ error: 'Super-admin access required' });
+        }
+        
+        req.superAdmin = decoded;
+        next();
+    });
+}
+
+// Admin or Super-Admin authentication middleware
+function authenticateAdminOrSuperAdmin(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).json({ error: 'Admin authentication required' });
+    }
+
+    jwt.verify(token, config.systemSettings.jwtSecret, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ error: 'Invalid or expired token' });
+        }
+        
+        // Check if it's an admin or super-admin token
+        if (decoded.role !== 'admin' && decoded.role !== 'super-admin') {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+        
+        if (decoded.role === 'super-admin') {
+            req.superAdmin = decoded;
+        } else {
+            req.admin = decoded;
+        }
+        req.userRole = decoded.role;
+        next();
+    });
+}
+
 // Generate JWT token
 function generateToken(user) {
     return jwt.sign(
         { userId: user.id, email: user.email, name: user.name },
-        config.settings.jwtSecret,
+        config.systemSettings.jwtSecret,
         { expiresIn: '24h' }
     );
 }
@@ -369,7 +669,213 @@ function getActiveFiles() {
     return activeFiles;
 }
 
-// Authentication routes
+// Admin registration and authentication routes
+app.post('/admin/register', async (req, res) => {
+    try {
+        const { name, email, password, instituteName, inviteCode } = req.body;
+        
+        // Validate input
+        if (!name || !email || !password || !instituteName || !inviteCode) {
+            return res.status(400).json({ 
+                error: 'Name, email, password, institution name, and invite code are required' 
+            });
+        }
+        
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+        }
+        
+        if (!isValidInviteCode(inviteCode)) {
+            return res.status(400).json({ 
+                error: 'Invalid invite code format. Use 6-12 uppercase letters and numbers only.' 
+            });
+        }
+        
+        // Check if email already exists
+        if (findAdminByEmail(email)) {
+            return res.status(400).json({ error: 'Admin with this email already exists' });
+        }
+        
+        // Check if invite code is available
+        if (!isInviteCodeAvailable(inviteCode)) {
+            return res.status(400).json({ error: 'Invite code already taken. Please choose another.' });
+        }
+        
+        // Create admin
+        const admin = createAdmin({ name, email, password, instituteName, inviteCode });
+        
+        // Generate token
+        const token = generateAdminToken(admin);
+        
+        console.log(`✅ New admin registered: ${email} (${instituteName}) - Invite code: ${inviteCode}`);
+        
+        res.json({
+            success: true,
+            message: 'Admin registered successfully!',
+            token,
+            admin: {
+                adminId: admin.adminId,
+                name: admin.name,
+                email: admin.email,
+                instituteName: admin.instituteName,
+                inviteCode: admin.inviteCode
+            }
+        });
+    } catch (error) {
+        console.error('Admin registration error:', error);
+        res.status(500).json({ error: 'Admin registration failed' });
+    }
+});
+
+app.post('/admin/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        
+        // Find admin
+        const admin = findAdminByEmail(email);
+        if (!admin) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+        
+        // Check if admin is active
+        if (!admin.isActive) {
+            return res.status(401).json({ error: 'Admin account is deactivated' });
+        }
+        
+        // Check password
+        const isValidPassword = bcrypt.compareSync(password, admin.password);
+        if (!isValidPassword) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+        
+        // Generate token
+        const token = generateAdminToken(admin);
+        
+        console.log(`✅ Admin logged in: ${email} (${admin.instituteName})`);
+        
+        res.json({
+            success: true,
+            message: 'Admin login successful',
+            token,
+            admin: {
+                adminId: admin.adminId,
+                name: admin.name,
+                email: admin.email,
+                instituteName: admin.instituteName,
+                inviteCode: admin.inviteCode
+            }
+        });
+    } catch (error) {
+        console.error('Admin login error:', error);
+        res.status(500).json({ error: 'Admin login failed' });
+    }
+});
+
+// Student registration and authentication routes  
+app.post('/student/register', async (req, res) => {
+    try {
+        const { name, email, password, inviteCode } = req.body;
+        
+        // Validate input
+        if (!name || !email || !password || !inviteCode) {
+            return res.status(400).json({ 
+                error: 'Name, email, password, and invite code are all required' 
+            });
+        }
+        
+        if (password.length < 6) {
+            return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+        }
+        
+        // Find admin by invite code
+        const admin = findAdminByInviteCode(inviteCode);
+        if (!admin) {
+            return res.status(400).json({ 
+                error: 'Invalid invite code. Please check with your teacher and try again.' 
+            });
+        }
+        
+        // Check if email already exists
+        if (findStudentByEmail(email)) {
+            return res.status(400).json({ error: 'Student with this email already exists' });
+        }
+        
+        // Create student and link to admin
+        const student = createStudent({ name, email, password, inviteCode }, admin.adminId);
+        
+        // Generate student token
+        const token = generateStudentToken(student);
+        
+        console.log(`✅ New student registered: ${email} → ${admin.instituteName} (${inviteCode})`);
+        
+        res.json({
+            success: true,
+            message: `Welcome to ${admin.instituteName}!`,
+            token,
+            student: {
+                studentId: student.studentId,
+                name: student.name,
+                email: student.email,
+                instituteName: admin.instituteName
+            }
+        });
+    } catch (error) {
+        console.error('Student registration error:', error);
+        res.status(500).json({ error: 'Student registration failed' });
+    }
+});
+
+app.post('/student/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        
+        // Find student
+        const student = findStudentByEmail(email);
+        if (!student) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+        
+        // Check if student is active
+        if (!student.isActive) {
+            return res.status(401).json({ error: 'Student account is deactivated' });
+        }
+        
+        // Check password
+        const isValidPassword = bcrypt.compareSync(password, student.password);
+        if (!isValidPassword) {
+            return res.status(401).json({ error: 'Invalid email or password' });
+        }
+        
+        // Update last login
+        config.students[student.studentId].lastLogin = new Date().toISOString();
+        saveConfig();
+        
+        // Get admin info
+        const admin = config.admins[student.adminId];
+        
+        // Generate token
+        const token = generateStudentToken(student);
+        
+        console.log(`✅ Student logged in: ${email} (${admin?.instituteName || 'Unknown Institution'})`);
+        
+        res.json({
+            success: true,
+            message: 'Student login successful',
+            token,
+            student: {
+                studentId: student.studentId,
+                name: student.name,
+                email: student.email,
+                instituteName: admin?.instituteName || 'Unknown Institution'
+            }
+        });
+    } catch (error) {
+        console.error('Student login error:', error);
+        res.status(500).json({ error: 'Student login failed' });
+    }
+});
+
+// Legacy authentication routes (for backward compatibility)
 app.post('/auth/register', async (req, res) => {
     try {
         const { name, email, password } = req.body;
@@ -465,31 +971,36 @@ app.get('/auth/me', authenticateToken, (req, res) => {
     });
 });
 
-// Admin authentication route
-app.post('/admin/authenticate', (req, res) => {
+// Super-Admin authentication route
+app.post('/super-admin/authenticate', (req, res) => {
     const { password } = req.body;
     
     if (!password) {
         return res.status(400).json({ error: 'Password is required' });
     }
     
-    if (password !== config.settings.adminPassword) {
-        console.log(`❌ Failed admin login attempt`);
-        return res.status(401).json({ error: 'Invalid admin password' });
+    if (password !== config.systemSettings.superAdminPassword) {
+        console.log(`❌ Failed super-admin login attempt`);
+        return res.status(401).json({ error: 'Invalid super-admin password' });
     }
     
-    // Generate JWT token for admin
-    const adminToken = jwt.sign(
-        { role: 'admin', authenticated: true },
-        config.settings.jwtSecret,
+    // Generate JWT token for super-admin
+    const superAdminToken = jwt.sign(
+        { 
+            role: 'super-admin', 
+            authenticated: true,
+            permissions: ['view-all', 'manage-all', 'system-settings']
+        },
+        config.systemSettings.jwtSecret,
         { expiresIn: '24h' }
     );
     
-    console.log(`✅ Admin authenticated successfully`);
+    console.log(`✅ Super-admin authenticated successfully`);
     res.json({ 
         success: true, 
-        message: 'Admin authentication successful',
-        token: adminToken
+        message: 'Super-admin authentication successful',
+        token: superAdminToken,
+        role: 'super-admin'
     });
 });
 
@@ -501,26 +1012,225 @@ app.post('/admin/logout', (req, res) => {
     res.json({ success: true, message: 'Logged out successfully' });
 });
 
-// User-specific routes
-app.get('/user/schedules', authenticateToken, (req, res) => {
-    const schedules = getUserSchedules(req.user.userId);
+// Super-Admin specific endpoints
+app.get('/super-admin/dashboard', authenticateSuperAdmin, (req, res) => {
+    const totalAdmins = Object.keys(config.admins).length;
+    const totalStudents = Object.keys(config.students).length;
+    const totalCollections = Object.keys(config.collections).length;
+    const totalSchedules = Object.keys(config.schedules).length;
+    
+    // Get active admins
+    const activeAdmins = Object.values(config.admins).filter(admin => admin.isActive);
+    
+    // Get active schedules across all admins
+    const activeSchedules = Object.values(config.schedules)
+        .filter(schedule => schedule.enabled && isTimeInSchedule(schedule))
+        .length;
+    
+    // Recent registrations (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const recentAdmins = Object.values(config.admins)
+        .filter(admin => new Date(admin.createdAt) > thirtyDaysAgo).length;
+    
+    const recentStudents = Object.values(config.students)
+        .filter(student => new Date(student.createdAt) > thirtyDaysAgo).length;
+    
+    res.json({
+        systemStats: {
+            totalAdmins,
+            activeAdmins: activeAdmins.length,
+            totalStudents,
+            totalCollections,
+            totalSchedules,
+            activeSchedules,
+            recentAdmins,
+            recentStudents
+        },
+        serverTime: new Date().toISOString(),
+        timezone: config.systemSettings.timezone
+    });
+});
+
+app.get('/super-admin/admins', authenticateSuperAdmin, (req, res) => {
+    const adminsWithStats = Object.values(config.admins).map(admin => ({
+        ...admin,
+        password: undefined, // Don't send password hashes
+        studentCount: Object.values(config.students)
+            .filter(student => student.adminId === admin.adminId).length,
+        collectionCount: Object.values(config.collections)
+            .filter(collection => collection.adminId === admin.adminId).length,
+        scheduleCount: Object.values(config.schedules)
+            .filter(schedule => schedule.adminId === admin.adminId).length
+    }));
+    
+    res.json(adminsWithStats);
+});
+
+app.get('/super-admin/students', authenticateSuperAdmin, (req, res) => {
+    const studentsWithAdminInfo = Object.values(config.students).map(student => {
+        const admin = config.admins[student.adminId];
+        return {
+            ...student,
+            password: undefined, // Don't send password hashes
+            adminName: admin?.name || 'Unknown',
+            instituteName: admin?.instituteName || 'Unknown'
+        };
+    });
+    
+    res.json(studentsWithAdminInfo);
+});
+
+app.get('/super-admin/collections', authenticateSuperAdmin, (req, res) => {
+    const collectionsWithAdminInfo = Object.values(config.collections).map(collection => {
+        const admin = config.admins[collection.adminId];
+        return {
+            ...collection,
+            adminName: admin?.name || 'Unknown',
+            instituteName: admin?.instituteName || 'Unknown'
+        };
+    });
+    
+    res.json(collectionsWithAdminInfo);
+});
+
+app.get('/super-admin/schedules', authenticateSuperAdmin, (req, res) => {
+    const schedulesWithAdminInfo = Object.values(config.schedules).map(schedule => {
+        const admin = config.admins[schedule.adminId];
+        const collection = config.collections[schedule.collectionId];
+        return {
+            ...schedule,
+            adminName: admin?.name || 'Unknown',
+            instituteName: admin?.instituteName || 'Unknown',
+            collectionName: collection?.name || 'Unknown',
+            isActive: schedule.enabled && isTimeInSchedule(schedule)
+        };
+    });
+    
+    res.json(schedulesWithAdminInfo);
+});
+
+app.post('/super-admin/admin/:adminId/toggle', authenticateSuperAdmin, (req, res) => {
+    const { adminId } = req.params;
+    
+    if (!config.admins[adminId]) {
+        return res.status(404).json({ error: 'Admin not found' });
+    }
+    
+    config.admins[adminId].isActive = !config.admins[adminId].isActive;
+    saveConfig();
+    
+    console.log(`✅ Super-admin ${config.admins[adminId].isActive ? 'activated' : 'deactivated'} admin: ${adminId}`);
+    
+    res.json({ 
+        success: true, 
+        isActive: config.admins[adminId].isActive,
+        message: `Admin ${config.admins[adminId].isActive ? 'activated' : 'deactivated'} successfully`
+    });
+});
+
+app.delete('/super-admin/admin/:adminId', authenticateSuperAdmin, (req, res) => {
+    const { adminId } = req.params;
+    
+    if (!config.admins[adminId]) {
+        return res.status(404).json({ error: 'Admin not found' });
+    }
+    
+    // Get admin info before deletion
+    const admin = config.admins[adminId];
+    
+    // Delete admin's students
+    const adminStudents = Object.keys(config.students).filter(
+        studentId => config.students[studentId].adminId === adminId
+    );
+    adminStudents.forEach(studentId => {
+        delete config.students[studentId];
+        delete config.studentProgress[studentId];
+        delete config.studentSchedules[studentId];
+    });
+    
+    // Delete admin's collections
+    const adminCollections = Object.keys(config.collections).filter(
+        collectionId => config.collections[collectionId].adminId === adminId
+    );
+    adminCollections.forEach(collectionId => {
+        delete config.collections[collectionId];
+    });
+    
+    // Delete admin's schedules
+    const adminSchedules = Object.keys(config.schedules).filter(
+        scheduleId => config.schedules[scheduleId].adminId === adminId
+    );
+    adminSchedules.forEach(scheduleId => {
+        delete config.schedules[scheduleId];
+    });
+    
+    // Delete admin
+    delete config.admins[adminId];
+    
+    saveConfig();
+    
+    console.log(`✅ Super-admin deleted admin: ${admin.name} (${adminId}) and all associated data`);
+    
+    res.json({ 
+        success: true, 
+        message: `Admin ${admin.name} and all associated data deleted successfully`,
+        deletedCounts: {
+            students: adminStudents.length,
+            collections: adminCollections.length,
+            schedules: adminSchedules.length
+        }
+    });
+});
+
+app.post('/super-admin/system-settings', authenticateSuperAdmin, (req, res) => {
+    const oldSettings = { ...config.systemSettings };
+    config.systemSettings = { ...config.systemSettings, ...req.body };
+    
+    // If timezone changed, update all existing schedules
+    if (req.body.timezone && req.body.timezone !== oldSettings.timezone) {
+        console.log(`\n🕒 Super-admin changed timezone from ${oldSettings.timezone} to ${req.body.timezone}`);
+        console.log('Updating all existing schedules...');
+        
+        Object.entries(config.schedules).forEach(([scheduleId, schedule]) => {
+            if (schedule.timeSlots) {
+                schedule.timeSlots.forEach(slot => {
+                    console.log(`  Updated ${scheduleId}: ${slot.timezone} -> ${req.body.timezone}`);
+                    slot.timezone = req.body.timezone;
+                });
+            }
+        });
+        
+        console.log('All schedules updated to use new timezone\n');
+    }
+    
+    saveConfig();
+    
+    console.log(`✅ Super-admin updated system settings`);
+    res.json({ success: true, systemSettings: config.systemSettings });
+});
+
+// Student-specific routes
+app.get('/student/schedules', authenticateStudent, (req, res) => {
+    const schedules = getStudentSchedules(req.student.studentId);
     res.json(schedules);
 });
 
-app.get('/user/available-files', authenticateToken, (req, res) => {
-    const files = getUserAvailableFiles(req.user.userId);
-    const userSchedules = getUserSchedules(req.user.userId);
-    const activeUserSchedules = userSchedules.filter(s => s.isActive);
+app.get('/student/available-files', authenticateStudent, (req, res) => {
+    const files = getStudentAvailableFiles(req.student.studentId);
+    const studentSchedules = getStudentSchedules(req.student.studentId);
+    const activeStudentSchedules = studentSchedules.filter(s => s.isActive);
     
     // Calculate progress information for each collection
     const collectionsProgress = {};
-    activeUserSchedules.forEach(schedule => {
+    activeStudentSchedules.forEach(schedule => {
         const collection = config.collections[schedule.collection];
         if (collection && collection.files) {
-            // Get user's progress for this collection
-            const userProgress = getUserProgress(req.user.userId, schedule.collection);
+            // Get student's progress for this collection
+            const studentProgress = getStudentProgress(req.student.studentId, schedule.collection);
             const totalFiles = collection.files.length;
-            const startIndex = Math.max(0, userProgress.currentPosition - 1);
+            const startIndex = Math.max(0, studentProgress.currentPosition - 1);
             const endIndex = collection.fileLimit && collection.fileLimit > 0 
                 ? Math.min(startIndex + collection.fileLimit, totalFiles)
                 : totalFiles;
@@ -534,38 +1244,53 @@ app.get('/user/available-files', authenticateToken, (req, res) => {
                 visibleFiles,
                 remainingFiles,
                 completedFiles,
-                currentPosition: userProgress.currentPosition,
+                currentPosition: studentProgress.currentPosition,
                 hasLimit: collection.fileLimit > 0
             };
         }
     });
     
+    // Get admin info
+    const admin = config.admins[req.student.adminId];
+    
     res.json({ 
         audioFiles: files, 
-        collectionsProgress 
+        collectionsProgress,
+        instituteName: admin?.instituteName || 'Unknown Institution'
     });
 });
 
-app.get('/user/stats', authenticateToken, (req, res) => {
-    const userSchedules = getUserSchedules(req.user.userId);
-    const availableFiles = getUserAvailableFiles(req.user.userId);
-    const activeSchedules = userSchedules.filter(s => s.isActive);
+app.get('/student/stats', authenticateStudent, (req, res) => {
+    const studentSchedules = getStudentSchedules(req.student.studentId);
+    const availableFiles = getStudentAvailableFiles(req.student.studentId);
+    const activeSchedules = studentSchedules.filter(s => s.isActive);
+    
+    // Get admin info
+    const admin = config.admins[req.student.adminId];
     
     res.json({
-        totalSchedules: userSchedules.length,
+        totalSchedules: studentSchedules.length,
         activeSchedules: activeSchedules.length,
-        availableFiles: availableFiles.length
+        availableFiles: availableFiles.length,
+        instituteName: admin?.instituteName || 'Unknown Institution'
     });
 });
 
-// User progress API endpoints
-app.get('/user/progress/:collectionId', authenticateToken, (req, res) => {
+// Student progress API endpoints
+app.get('/student/progress/:collectionId', authenticateStudent, (req, res) => {
     const { collectionId } = req.params;
-    const progress = getUserProgress(req.user.userId, collectionId);
+    
+    // Verify collection belongs to student's admin
+    const collection = config.collections[collectionId];
+    if (!collection || collection.adminId !== req.student.adminId) {
+        return res.status(403).json({ error: 'Collection not accessible' });
+    }
+    
+    const progress = getStudentProgress(req.student.studentId, collectionId);
     res.json(progress);
 });
 
-app.post('/user/progress/:collectionId', authenticateToken, (req, res) => {
+app.post('/student/progress/:collectionId', authenticateStudent, (req, res) => {
     const { collectionId } = req.params;
     const { newPosition } = req.body;
     
@@ -573,7 +1298,13 @@ app.post('/user/progress/:collectionId', authenticateToken, (req, res) => {
         return res.status(400).json({ error: 'Invalid position' });
     }
     
-    updateUserProgress(req.user.userId, collectionId, newPosition);
+    // Verify collection belongs to student's admin
+    const collection = config.collections[collectionId];
+    if (!collection || collection.adminId !== req.student.adminId) {
+        return res.status(403).json({ error: 'Collection not accessible' });
+    }
+    
+    updateStudentProgress(req.student.studentId, collectionId, newPosition);
     res.json({ 
         success: true, 
         message: 'Progress updated',
@@ -584,40 +1315,75 @@ app.post('/user/progress/:collectionId', authenticateToken, (req, res) => {
 // Admin UI served both locally and by GitHub Pages
 app.use('/admin', express.static(ADMIN_UI_DIR));
 
-// Admin API endpoints (all protected)
-app.get('/admin/config', authenticateAdmin, (req, res) => {
-    res.json(config);
-});
-
-app.post('/admin/config', authenticateAdmin, (req, res) => {
-    config = { ...config, ...req.body };
-    saveConfig();
-    res.json({ success: true });
+// Admin API endpoints (all protected and filtered by adminId)
+app.get('/admin/dashboard', authenticateAdmin, (req, res) => {
+    const { adminId } = req.admin;
+    
+    const adminData = config.admins[adminId];
+    const collections = getAdminCollections(adminId);
+    const schedules = getAdminSchedules(adminId);
+    const students = getAdminStudents(adminId);
+    
+    res.json({
+        admin: {
+            adminId: adminData.adminId,
+            name: adminData.name,
+            email: adminData.email,
+            instituteName: adminData.instituteName,
+            inviteCode: adminData.inviteCode,
+            stats: adminData.stats
+        },
+        collections,
+        schedules,
+        students: students.map(s => ({
+            studentId: s.studentId,
+            name: s.name,
+            email: s.email,
+            joinedViaInvite: s.joinedViaInvite,
+            createdAt: s.createdAt,
+            lastLogin: s.lastLogin,
+            isActive: s.isActive
+        }))
+    });
 });
 
 app.get('/admin/status', authenticateAdmin, (req, res) => {
-    const activeSchedules = Object.entries(config.schedules)
-        .filter(([id, schedule]) => schedule.enabled && isTimeInSchedule(schedule))
-        .map(([id, schedule]) => ({ id, name: schedule.name }));
+    const { adminId } = req.admin;
+    
+    const adminSchedules = getAdminSchedules(adminId);
+    const activeSchedules = adminSchedules
+        .filter(schedule => schedule.enabled && isTimeInSchedule(schedule))
+        .map(schedule => ({ 
+            id: schedule.scheduleId, 
+            name: schedule.name 
+        }));
+    
+    const adminData = config.admins[adminId];
     
     res.json({
         serverTime: new Date().toISOString(),
-        timezone: config.settings.timezone,
+        timezone: config.systemSettings.timezone,
         activeSchedules,
-        totalCollections: Object.keys(config.collections).length,
-        totalSchedules: Object.keys(config.schedules).length
+        totalCollections: getAdminCollections(adminId).length,
+        totalSchedules: adminSchedules.length,
+        totalStudents: adminData.stats.totalStudents,
+        instituteName: adminData.instituteName
     });
 });
 
 app.get('/admin/collections', authenticateAdmin, (req, res) => {
-    res.json(config.collections);
+    const collections = getAdminCollections(req.admin.adminId);
+    res.json(collections);
 });
 
 app.post('/admin/collections', authenticateAdmin, (req, res) => {
     const { name, path, files, fileLimit } = req.body;
-    const id = name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const { adminId } = req.admin;
+    const id = `${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${adminId}`;
     
     config.collections[id] = {
+        collectionId: id,
+        adminId,
         name,
         path,
         files: files || [],
@@ -631,12 +1397,20 @@ app.post('/admin/collections', authenticateAdmin, (req, res) => {
 app.put('/admin/collections/:id', authenticateAdmin, (req, res) => {
     const { id } = req.params;
     const { name, path, files, fileLimit } = req.body;
+    const { adminId } = req.admin;
     
-    if (!config.collections[id]) {
+    const collection = config.collections[id];
+    if (!collection) {
         return res.status(404).json({ error: 'Collection not found' });
     }
     
+    // Verify collection belongs to this admin
+    if (collection.adminId !== adminId) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    
     config.collections[id] = {
+        ...collection,
         name,
         path,
         files: files || [],
@@ -649,27 +1423,52 @@ app.put('/admin/collections/:id', authenticateAdmin, (req, res) => {
 
 app.delete('/admin/collections/:id', authenticateAdmin, (req, res) => {
     const { id } = req.params;
+    const { adminId } = req.admin;
+    
+    const collection = config.collections[id];
+    if (!collection) {
+        return res.status(404).json({ error: 'Collection not found' });
+    }
+    
+    // Verify collection belongs to this admin
+    if (collection.adminId !== adminId) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    
     delete config.collections[id];
     saveConfig();
     res.json({ success: true });
 });
 
 app.get('/admin/schedules', authenticateAdmin, (req, res) => {
-    res.json(config.schedules);
+    const schedules = getAdminSchedules(req.admin.adminId);
+    res.json(schedules);
 });
 
 app.post('/admin/schedules', authenticateAdmin, (req, res) => {
     const schedule = req.body;
-    const id = schedule.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const { adminId } = req.admin;
+    const id = `${schedule.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${adminId}`;
+    
+    // Verify collection belongs to this admin
+    const collection = config.collections[schedule.collectionId];
+    if (!collection || collection.adminId !== adminId) {
+        return res.status(400).json({ error: 'Invalid collection or access denied' });
+    }
     
     // Ensure schedule uses the system timezone
     if (schedule.timeSlots) {
         schedule.timeSlots.forEach(slot => {
-            slot.timezone = config.settings.timezone || 'Asia/Kolkata';
+            slot.timezone = config.systemSettings.timezone || 'Asia/Kolkata';
         });
     }
     
-    config.schedules[id] = schedule;
+    config.schedules[id] = {
+        ...schedule,
+        scheduleId: id,
+        adminId
+    };
+    
     saveConfig();
     res.json({ success: true, id });
 });
@@ -677,36 +1476,74 @@ app.post('/admin/schedules', authenticateAdmin, (req, res) => {
 app.put('/admin/schedules/:id', authenticateAdmin, (req, res) => {
     const { id } = req.params;
     const schedule = req.body;
+    const { adminId } = req.admin;
     
-    if (!config.schedules[id]) {
+    const existingSchedule = config.schedules[id];
+    if (!existingSchedule) {
         return res.status(404).json({ error: 'Schedule not found' });
+    }
+    
+    // Verify schedule belongs to this admin
+    if (existingSchedule.adminId !== adminId) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    // Verify collection belongs to this admin
+    const collection = config.collections[schedule.collectionId];
+    if (!collection || collection.adminId !== adminId) {
+        return res.status(400).json({ error: 'Invalid collection or access denied' });
     }
     
     // Ensure schedule uses the system timezone
     if (schedule.timeSlots) {
         schedule.timeSlots.forEach(slot => {
-            slot.timezone = config.settings.timezone || 'Asia/Kolkata';
+            slot.timezone = config.systemSettings.timezone || 'Asia/Kolkata';
         });
     }
     
-    config.schedules[id] = schedule;
+    config.schedules[id] = {
+        ...schedule,
+        scheduleId: id,
+        adminId
+    };
+    
     saveConfig();
     res.json({ success: true });
 });
 
 app.post('/admin/schedules/:id/toggle', authenticateAdmin, (req, res) => {
     const { id } = req.params;
-    if (config.schedules[id]) {
-        config.schedules[id].enabled = !config.schedules[id].enabled;
-        saveConfig();
-        res.json({ success: true, enabled: config.schedules[id].enabled });
-    } else {
-        res.status(404).json({ error: 'Schedule not found' });
+    const { adminId } = req.admin;
+    
+    const schedule = config.schedules[id];
+    if (!schedule) {
+        return res.status(404).json({ error: 'Schedule not found' });
     }
+    
+    // Verify schedule belongs to this admin
+    if (schedule.adminId !== adminId) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    
+    config.schedules[id].enabled = !config.schedules[id].enabled;
+    saveConfig();
+    res.json({ success: true, enabled: config.schedules[id].enabled });
 });
 
 app.delete('/admin/schedules/:id', authenticateAdmin, (req, res) => {
     const { id } = req.params;
+    const { adminId } = req.admin;
+    
+    const schedule = config.schedules[id];
+    if (!schedule) {
+        return res.status(404).json({ error: 'Schedule not found' });
+    }
+    
+    // Verify schedule belongs to this admin
+    if (schedule.adminId !== adminId) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
+    
     delete config.schedules[id];
     saveConfig();
     res.json({ success: true });
@@ -785,8 +1622,8 @@ app.get('/admin/browse', authenticateAdmin, (req, res) => {
 });
 
 app.post('/admin/settings', authenticateAdmin, (req, res) => {
-    const oldTimezone = config.settings.timezone;
-    config.settings = { ...config.settings, ...req.body };
+    const oldTimezone = config.systemSettings.timezone;
+    config.systemSettings = { ...config.systemSettings, ...req.body };
     
     // If timezone changed, update all existing schedules
     if (req.body.timezone && req.body.timezone !== oldTimezone) {
@@ -1173,7 +2010,7 @@ app.get('/api/status', (req, res) => {
         filesAvailable: activeFiles.length,
         activeSchedules: activeSchedules.length,
         serverTime: new Date().toISOString(),
-        timezone: config.settings.timezone
+        timezone: config.systemSettings.timezone
     });
 });
 

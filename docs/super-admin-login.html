@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Admin Login - Audio Server</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header .icon {
+            font-size: 4em;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .header h1 {
+            color: #4a5568;
+            font-size: 2em;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #4a5568;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .login-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin-bottom: 20px;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .alert-error {
+            background: #fed7d7;
+            color: #9b2c2c;
+            border: 1px solid #feb2b2;
+        }
+
+        .alert-success {
+            background: #c6f6d5;
+            color: #2f855a;
+            border: 1px solid #9ae6b4;
+        }
+
+        .features {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .features h3 {
+            color: #4a5568;
+            font-size: 1em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .features ul {
+            list-style: none;
+            color: #718096;
+            font-size: 0.9em;
+        }
+
+        .features li {
+            padding: 5px 0;
+            position: relative;
+            padding-left: 20px;
+        }
+
+        .features li::before {
+            content: "⚡";
+            position: absolute;
+            left: 0;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="header">
+            <span class="icon">🔐</span>
+            <h1>Super Admin</h1>
+            <p>System-wide management access</p>
+        </div>
+
+        <div id="alert-container"></div>
+
+        <form id="super-admin-form">
+            <div class="form-group">
+                <label for="password">Super Admin Password</label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    required 
+                    placeholder="Enter super admin password"
+                    autocomplete="current-password"
+                >
+            </div>
+
+            <button type="submit" class="login-btn" id="login-btn">
+                Sign In as Super Admin
+            </button>
+        </form>
+
+        <div class="features">
+            <h3>Super Admin Capabilities</h3>
+            <ul>
+                <li>Manage all administrators</li>
+                <li>View system-wide statistics</li>
+                <li>Access all student data</li>
+                <li>Control admin permissions</li>
+                <li>System configuration</li>
+            </ul>
+        </div>
+
+        <div class="back-link">
+            <a href="index.html">← Back to Home</a>
+        </div>
+    </div>
+
+    <script>
+        // Auto-detect server URL
+        const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:8000' 
+            : 'https://sleepy-thunder-45656.pktriot.net';
+
+        const form = document.getElementById('super-admin-form');
+        const loginBtn = document.getElementById('login-btn');
+        const alertContainer = document.getElementById('alert-container');
+
+        function showAlert(message, type = 'error') {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alert);
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const password = document.getElementById('password').value;
+            
+            if (!password) {
+                showAlert('Please enter the super admin password');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Signing In...';
+
+            try {
+                const response = await fetch(`${SERVER_URL}/super-admin/authenticate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Store the super admin token
+                    localStorage.setItem('superAdminToken', data.token);
+                    localStorage.setItem('userRole', 'super-admin');
+                    
+                    showAlert('Super admin login successful! Redirecting...', 'success');
+                    
+                    // Redirect to super admin dashboard
+                    setTimeout(() => {
+                        window.location.href = 'super-admin-dashboard.html';
+                    }, 1500);
+                } else {
+                    showAlert(data.message || 'Invalid super admin password');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showAlert('Connection error. Please check if the server is running.');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Sign In as Super Admin';
+            }
+        });
+
+        // Clear any previous session data
+        document.addEventListener('DOMContentLoaded', () => {
+            localStorage.removeItem('superAdminToken');
+            localStorage.removeItem('userRole');
+        });
+    </script>
+</body>
+</html>

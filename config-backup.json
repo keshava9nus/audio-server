@@ -1,7 +1,8 @@
 {
-  "systemSettings": {
+  "settings": {
     "timezone": "Asia/Kolkata",
-    "superAdminPassword": "HareKrishna",
+    "adminPassword": "HareKrishna",
+    "defaultCollectionPath": "./audio",
     "jwtSecret": "your-secure-jwt-secret-key-change-this-in-production",
     "emailEnabled": false,
     "smtpSettings": {
@@ -11,88 +12,54 @@
       "password": ""
     }
   },
-  "admins": {
-    "admin-default": {
-      "adminId": "admin-default",
-      "name": "Default Admin",
-      "email": "admin@audio-server.com",
-      "password": "$2b$10$N9qo8uLOickgx2ZMRZoMye1PV.8tOLR2ql/Qj6QBHGQd2jIrWiXEC",
-      "instituteName": "Audio Server Institute",
-      "inviteCode": "AUDIO2024",
-      "isActive": true,
-      "createdAt": "2025-07-01T00:00:00.000Z",
-      "stats": {
-        "totalStudents": 3,
-        "activeStudents": 3,
-        "registrationsThisMonth": 3
-      }
-    },
-    "admin-1751368322048": {
-      "adminId": "admin-1751368322048",
-      "name": "Gita Teacher",
-      "email": "gita@example.com",
-      "password": "$2b$10$Q/YqIdW5FTIsZxPOQrO2G.T8MlY0s2eQ8vPyi6WiazNdWSdyzlLIa",
-      "instituteName": "Bhagavad Gita Institute",
-      "inviteCode": "GITA2024",
-      "isActive": true,
-      "createdAt": "2025-07-01T11:12:02.119Z",
-      "stats": {
-        "totalStudents": 1,
-        "activeStudents": 1,
-        "registrationsThisMonth": 1
-      }
-    }
-  },
-  "students": {
+  "users": {
     "e2c9e269-8976-4a63-9d1d-67789b4f5a86": {
-      "studentId": "e2c9e269-8976-4a63-9d1d-67789b4f5a86",
-      "adminId": "admin-default",
+      "id": "e2c9e269-8976-4a63-9d1d-67789b4f5a86",
       "name": "Guest",
       "email": "a@b.com",
       "password": "$2b$10$AmH8l5M4/oauTy1Cic8h8eWlfmLML8DK8pIKBeO18B6DizCmX3xdC",
-      "joinedViaInvite": "MIGRATED",
-      "isActive": true,
+      "verified": false,
       "createdAt": "2025-06-29T15:21:54.086Z",
-      "lastLogin": null
+      "schedules": []
     },
     "6c723882-487c-4978-bfc4-712a03d45c19": {
-      "studentId": "6c723882-487c-4978-bfc4-712a03d45c19",
-      "adminId": "admin-default",
+      "id": "6c723882-487c-4978-bfc4-712a03d45c19",
       "name": "Test",
       "email": "test@gmail.com",
       "password": "$2b$10$HtnAmLRSwnPiteM9eWDok.FU56diSifVy/wYk/t7nq6JWXlaiUdPm",
-      "joinedViaInvite": "MIGRATED",
-      "isActive": true,
+      "verified": false,
       "createdAt": "2025-06-30T06:08:32.332Z",
-      "lastLogin": null
+      "schedules": []
     },
     "0e321b66-d0ba-4f68-a63f-1c4bba31be60": {
-      "studentId": "0e321b66-d0ba-4f68-a63f-1c4bba31be60",
-      "adminId": "admin-default",
+      "id": "0e321b66-d0ba-4f68-a63f-1c4bba31be60",
       "name": "Test User",
       "email": "test2@example.com",
       "password": "$2b$10$lZnJgtkEd7zmGHnyIrCQjunPRkpEMGxBn47TFkuaFLvE7v0L6uQWC",
-      "joinedViaInvite": "MIGRATED",
-      "isActive": true,
+      "verified": false,
       "createdAt": "2025-06-30T14:53:20.329Z",
-      "lastLogin": null
-    },
-    "student-1751368339237": {
-      "studentId": "student-1751368339237",
-      "adminId": "admin-1751368322048",
-      "name": "Krishna Das",
-      "email": "krishna@example.com",
-      "password": "$2b$10$8NPAHBiPkJmsV2JdAyWSdeBGojue/0cihhYDSkQ/fpY756bljpP3u",
-      "joinedViaInvite": "GITA2024",
-      "isActive": true,
-      "createdAt": "2025-07-01T11:12:19.312Z",
-      "lastLogin": "2025-07-01T11:12:30.336Z"
+      "schedules": []
     }
   },
+  "userSchedules": {
+    "e2c9e269-8976-4a63-9d1d-67789b4f5a86": [
+      "always_active_test_schedule",
+      "kirtans"
+    ],
+    "6c723882-487c-4978-bfc4-712a03d45c19": [
+      "geetika_didi_schedule",
+      "kirtans"
+    ],
+    "0e321b66-d0ba-4f68-a63f-1c4bba31be60": [
+      "always_active_test_schedule"
+    ]
+  },
+  "activeSchedules": [
+    "always_active_test_schedule",
+    "kirtans"
+  ],
   "collections": {
     "sample_audio_collection": {
-      "collectionId": "sample_audio_collection",
-      "adminId": "admin-default",
       "name": "Sample Audio Collection",
       "path": "/Users/shivin/GV/Classes/Bhagavad Gītā - Overview (Sep-Dec 2020) (Hindi)/BG Intro",
       "files": [
@@ -101,12 +68,9 @@
         "8. Qualities of a speaker - 3 (25.09.20)d.mp3",
         "80. Surrendering to Krsna by chanting and hearing the Holy name (05.12.20).mp3",
         "81. Q&A on Karma topic (06.12.20).mp3"
-      ],
-      "fileLimit": null
+      ]
     },
     "institute_classes": {
-      "collectionId": "institute_classes",
-      "adminId": "admin-default",
       "name": "Institute Classes",
       "path": "/Users/shivin/GV/Classes/Institute Class",
       "files": [
@@ -114,23 +78,17 @@
         "15.20170301.m4a",
         "16. 20170303.m4a",
         "17.20170315.m4a"
-      ],
-      "fileLimit": null
+      ]
     },
     "kirtans": {
-      "collectionId": "kirtans",
-      "adminId": "admin-default",
       "name": "Kirtans",
       "path": "/Users/shivin/GV/Classes/Bhagavad Gītā - Overview (Sep-Dec 2020) (Hindi)",
       "files": [
         "Hare Krsna ... (20.02.17).mp3",
         "Hare Krsna Kirtana (26.02.22).mp3"
-      ],
-      "fileLimit": null
+      ]
     },
     "ch_14_kirtans": {
-      "collectionId": "ch_14_kirtans",
-      "adminId": "admin-default",
       "name": "Ch 14 kirtans",
       "path": "./collections/ch_14_kirtans",
       "files": [
@@ -143,14 +101,10 @@
         "Sri Krsna Caitanya Prabhu doya... 1.mp3",
         "Udilo aruna puraba... 1.mp3",
         "nana sastra vicaranaika... (07_10_15) 1.mp3"
-      ],
-      "fileLimit": null
+      ]
     },
     "test_limited_collection": {
-      "collectionId": "test_limited_collection",
-      "adminId": "admin-default",
       "name": "Test Limited Collection",
-      "path": null,
       "files": [
         "file1.mp3",
         "file2.mp3",
@@ -163,10 +117,8 @@
   },
   "schedules": {
     "always_active_test_schedule": {
-      "scheduleId": "always_active_test_schedule",
-      "adminId": "admin-default",
-      "collectionId": "sample_audio_collection",
       "name": "Always Active Test Schedule",
+      "collection": "sample_audio_collection",
       "enabled": true,
       "timeSlots": [
         {
@@ -183,10 +135,8 @@
       }
     },
     "geetika_didi_schedule": {
-      "scheduleId": "geetika_didi_schedule",
-      "adminId": "admin-default",
-      "collectionId": "institute_classes",
       "name": "Geetika Didi schedule",
+      "collection": "institute_classes",
       "enabled": true,
       "timeSlots": [
         {
@@ -203,10 +153,8 @@
       }
     },
     "kirtans": {
-      "scheduleId": "kirtans",
-      "adminId": "admin-default",
-      "collectionId": "kirtans",
       "name": "Kirtans",
+      "collection": "kirtans",
       "enabled": true,
       "timeSlots": [
         {
@@ -223,20 +171,7 @@
       }
     }
   },
-  "studentSchedules": {
-    "e2c9e269-8976-4a63-9d1d-67789b4f5a86": [
-      "always_active_test_schedule",
-      "kirtans"
-    ],
-    "6c723882-487c-4978-bfc4-712a03d45c19": [
-      "geetika_didi_schedule",
-      "kirtans"
-    ],
-    "0e321b66-d0ba-4f68-a63f-1c4bba31be60": [
-      "always_active_test_schedule"
-    ]
-  },
-  "studentProgress": {
+  "userProgress": {
     "e2c9e269-8976-4a63-9d1d-67789b4f5a86": {
       "sample_audio_collection": {
         "currentPosition": 1,
@@ -252,11 +187,6 @@
         "currentPosition": 3,
         "lastAccessed": "2025-06-30T17:40:01.405Z"
       }
-    },
-    "student-1751368339237": {}
-  },
-  "activeSchedules": [
-    "always_active_test_schedule",
-    "kirtans"
-  ]
+    }
+  }
 }

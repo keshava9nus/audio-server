@@ -103,6 +103,22 @@
             border-color: #f56565;
         }
 
+        .super-admin-card {
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            color: white;
+        }
+
+        .super-admin-card h3,
+        .super-admin-card p {
+            color: white;
+        }
+
+        .super-admin-card:hover {
+            border-color: #2d3748;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(45, 55, 72, 0.25);
+        }
+
         .quick-access {
             margin-top: 40px;
             padding-top: 30px;
@@ -195,27 +211,32 @@
             </div>
         </div>
 
-        <div class="auth-options">
+        <div class="auth-options" id="auth-options">
             <a href="login.html" class="auth-card participant-card">
                 <div class="auth-card-icon">👥</div>
-                <h3>Participant Login</h3>
+                <h3>Student Login</h3>
                 <p>Access your assigned audio schedules and listen to available content</p>
             </a>
 
-            <a href="admin-login.html" class="auth-card admin-card">
+            <a href="admin-login.html" class="auth-card admin-card" id="admin-card">
                 <div class="auth-card-icon">⚙️</div>
                 <h3>Admin Panel</h3>
-                <p>Manage collections, schedules, users, and server settings</p>
+                <p>Manage your collections, schedules, and students</p>
+            </a>
+
+            <a href="super-admin-login.html" class="auth-card super-admin-card" id="super-admin-card">
+                <div class="auth-card-icon">🔐</div>
+                <h3>Super Admin</h3>
+                <p>System-wide management and administrator control</p>
             </a>
         </div>
 
         <div class="quick-access">
             <h4>Quick Access</h4>
-            <div class="quick-links">
-                <a href="register.html" class="quick-link">Create Account</a>
-                <!-- <a href="/audio-files" class="quick-link">Browse Audio Files</a>
-                <a href="#" class="quick-link" onclick="showCurrentFiles()">Current Files</a> -->
-                <a href="#" class="quick-link" onclick="window.open(`${SERVER_URL}/api/status`, '_blank')">Server Status</a>
+            <div class="quick-links" id="quick-links">
+                <a href="register.html" class="quick-link">Student Registration</a>
+                <a href="admin-register.html" class="quick-link" id="admin-register-link">Admin Registration</a>
+                <a href="#" class="quick-link" onclick="window.open(`${SERVER_URL}/api/status`, '_blank')" id="server-status-link">Server Status</a>
             </div>
         </div>
 
@@ -231,9 +252,10 @@
             ? 'http://localhost:8000' 
             : 'https://sleepy-thunder-45656.pktriot.net';
         
-        // Check server status on load
+        // Check server status on load and hide super admin on GitHub Pages
         document.addEventListener('DOMContentLoaded', function() {
             checkServerStatus();
+            hideElementsOnGitHubPages();
         });
 
         async function checkServerStatus() {
@@ -284,6 +306,25 @@
                 }
             } else {
                 filesInfo.style.display = 'none';
+            }
+        }
+
+        function hideElementsOnGitHubPages() {
+            // Check if we're on GitHub Pages (github.io domain)
+            const isGitHubPages = window.location.hostname.includes('github.io');
+            
+            if (isGitHubPages) {
+                // Hide only the Super Admin panel on GitHub Pages
+                const superAdminCard = document.getElementById('super-admin-card');
+                if (superAdminCard) {
+                    superAdminCard.style.display = 'none';
+                }
+                
+                // Also hide server status link since it won't work on static hosting
+                const serverStatusLink = document.getElementById('server-status-link');
+                if (serverStatusLink) {
+                    serverStatusLink.style.display = 'none';
+                }
             }
         }
 

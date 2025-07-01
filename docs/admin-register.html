@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Registration - Audio Server</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .register-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header .icon {
+            font-size: 4em;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .header h1 {
+            color: #4a5568;
+            font-size: 2em;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #4a5568;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+            font-family: inherit;
+        }
+
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .register-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            margin-bottom: 20px;
+        }
+
+        .register-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .register-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+
+        .alert {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 500;
+        }
+
+        .alert-error {
+            background: #fed7d7;
+            color: #9b2c2c;
+            border: 1px solid #feb2b2;
+        }
+
+        .alert-success {
+            background: #c6f6d5;
+            color: #2f855a;
+            border: 1px solid #9ae6b4;
+        }
+
+        .info-box {
+            background: #ebf8ff;
+            border: 1px solid #bee3f8;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 25px;
+        }
+
+        .info-box h3 {
+            color: #2b6cb0;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .info-box ul {
+            color: #2c5282;
+            margin-left: 20px;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 600px) {
+            .register-container {
+                padding: 30px 20px;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="header">
+            <span class="icon">👨‍🏫</span>
+            <h1>Admin Registration</h1>
+            <p>Create your administrator account</p>
+        </div>
+
+        <div class="info-box">
+            <h3>Admin Account Benefits</h3>
+            <ul>
+                <li>Manage your own students and collections</li>
+                <li>Create custom audio schedules</li>
+                <li>Generate invite codes for student registration</li>
+                <li>Track student progress and analytics</li>
+                <li>Isolated data management</li>
+            </ul>
+        </div>
+
+        <div id="alert-container"></div>
+
+        <form id="admin-register-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input 
+                        type="text" 
+                        id="name" 
+                        name="name" 
+                        required 
+                        placeholder="Your full name"
+                        autocomplete="name"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        required 
+                        placeholder="admin@example.com"
+                        autocomplete="email"
+                    >
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="instituteName">Institute/Organization Name</label>
+                <input 
+                    type="text" 
+                    id="instituteName" 
+                    name="instituteName" 
+                    required 
+                    placeholder="Your institute or organization name"
+                >
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        required 
+                        placeholder="Create a strong password"
+                        autocomplete="new-password"
+                        minlength="6"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input 
+                        type="password" 
+                        id="confirmPassword" 
+                        name="confirmPassword" 
+                        required 
+                        placeholder="Confirm your password"
+                        autocomplete="new-password"
+                    >
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="inviteCode">Invite Code (Optional)</label>
+                <input 
+                    type="text" 
+                    id="inviteCode" 
+                    name="inviteCode" 
+                    placeholder="Enter invite code if you have one"
+                    style="text-transform: uppercase;"
+                >
+                <small style="color: #718096; font-size: 0.9em;">
+                    Leave blank to auto-generate an invite code for your students
+                </small>
+            </div>
+
+            <button type="submit" class="register-btn" id="register-btn">
+                Create Admin Account
+            </button>
+        </form>
+
+        <div class="back-link">
+            <a href="index.html">← Back to Home</a> | 
+            <a href="admin-login.html">Already have an account? Sign In</a>
+        </div>
+    </div>
+
+    <script>
+        // Auto-detect server URL
+        const SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:8000' 
+            : 'https://sleepy-thunder-45656.pktriot.net';
+
+        const form = document.getElementById('admin-register-form');
+        const registerBtn = document.getElementById('register-btn');
+        const alertContainer = document.getElementById('alert-container');
+
+        function showAlert(message, type = 'error') {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alert);
+        }
+
+        // Auto-format invite code to uppercase
+        document.getElementById('inviteCode').addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase();
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+
+            // Validation
+            if (data.password !== data.confirmPassword) {
+                showAlert('Passwords do not match');
+                return;
+            }
+
+            if (data.password.length < 6) {
+                showAlert('Password must be at least 6 characters long');
+                return;
+            }
+
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Creating Account...';
+
+            try {
+                const requestData = {
+                    name: data.name,
+                    email: data.email,
+                    password: data.password,
+                    instituteName: data.instituteName
+                };
+
+                // Add invite code if provided
+                if (data.inviteCode.trim()) {
+                    requestData.inviteCode = data.inviteCode.trim();
+                }
+
+                const response = await fetch(`${SERVER_URL}/admin/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showAlert(
+                        `Admin account created successfully! Your invite code for students: ${result.admin.inviteCode}`, 
+                        'success'
+                    );
+                    
+                    // Reset form
+                    form.reset();
+                    
+                    // Redirect to login after 3 seconds
+                    setTimeout(() => {
+                        window.location.href = 'admin-login.html';
+                    }, 3000);
+                } else {
+                    showAlert(result.message || 'Registration failed');
+                }
+            } catch (error) {
+                console.error('Registration error:', error);
+                showAlert('Connection error. Please check if the server is running.');
+            } finally {
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Create Admin Account';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -171,9 +171,9 @@
 <body>
     <div class="auth-container">
         <div class="auth-header">
-            <div class="admin-icon">🔐</div>
-            <h1>Admin Access</h1>
-            <p>Enter admin credentials to continue</p>
+            <div class="admin-icon">👨‍🏫</div>
+            <h1>Admin Login</h1>
+            <p>Sign in to your administrator account</p>
         </div>
 
         <div class="security-notice">
@@ -186,30 +186,35 @@
 
         <form id="admin-login-form">
             <div class="form-group">
-                <label for="admin-password">Admin Password</label>
-                <input type="password" id="admin-password" required placeholder="Enter admin password" autocomplete="current-password">
-                <small style="color: #718096; font-size: 0.8em; margin-top: 5px; display: block;">Click here and type your password</small>
+                <label for="admin-email">Email Address</label>
+                <input type="email" id="admin-email" required placeholder="Enter your admin email" autocomplete="email">
             </div>
 
-            <button type="submit" class="btn btn-primary">Access Admin Panel</button>
+            <div class="form-group">
+                <label for="admin-password">Password</label>
+                <input type="password" id="admin-password" required placeholder="Enter your password" autocomplete="current-password">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Sign In</button>
             <a href="index.html" class="btn btn-secondary">← Back to Home</a>
         </form>
 
         <div class="form-links">
-            <a href="login.html">Participant Login</a>
+            <a href="admin-register.html">Don't have an account? Register</a> |
+            <a href="login.html">Student Login</a>
         </div>
     </div>
 
     <script>
         console.log('Admin login page loaded');
         
-        // Focus on password field immediately
+        // Focus on email field immediately
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded');
-            const passwordField = document.getElementById('admin-password');
-            if (passwordField) {
-                passwordField.focus();
-                console.log('Password field focused');
+            const emailField = document.getElementById('admin-email');
+            if (emailField) {
+                emailField.focus();
+                console.log('Email field focused');
             }
         });
 
@@ -217,11 +222,16 @@
             e.preventDefault();
             console.log('Form submitted');
             
+            const email = document.getElementById('admin-email').value;
             const password = document.getElementById('admin-password').value;
-            console.log('Password length:', password.length);
+            
+            if (!email) {
+                showAlert('Please enter your email address', 'error');
+                return;
+            }
             
             if (!password) {
-                showAlert('Please enter a password', 'error');
+                showAlert('Please enter your password', 'error');
                 return;
             }
             
@@ -239,24 +249,27 @@
                         'Content-Type': 'application/json'
                     },
                     credentials: 'include',
-                    body: JSON.stringify({ password })
+                    body: JSON.stringify({ email, password })
                 });
                 
                 const result = await response.json();
                 
-                if (response.ok) {
+                if (response.ok && result.success) {
                     showAlert('Login successful! Redirecting...', 'success');
-                    // Store admin token
+                    // Store admin token and info
                     localStorage.setItem('adminToken', result.token);
+                    localStorage.setItem('userRole', 'admin');
+                    localStorage.setItem('adminId', result.admin.adminId);
+                    localStorage.setItem('adminName', result.admin.name);
                     setTimeout(() => {
                         window.location.href = 'admin-ui/index.html';
                     }, 1000);
                 } else {
-                    showAlert(result.error || 'Login failed', 'error');
+                    showAlert(result.message || 'Invalid email or password', 'error');
                 }
             } catch (error) {
                 console.error('Login error:', error);
-                showAlert('Login failed. Please try again.', 'error');
+                showAlert('Login failed. Please check if the server is running.', 'error');
             }
             
             showLoading(false);

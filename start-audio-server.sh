@@ -2,6 +2,7 @@
 
 # Audio Server Startup Script
 # This script starts both the Node.js audio server and the pktriot tunnel
+# Updated to use bundled binaries like the Electron app
 
 set -e  # Exit on any error
 
@@ -15,12 +16,35 @@ NC='\033[0m' # No Color
 # Configuration
 NODE_PORT=8000
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PKTRIOT_DIR="$SCRIPT_DIR/pktriot-0.15.6"
-PKTRIOT_BINARY="$PKTRIOT_DIR/pktriot"
 SERVER_SCRIPT="$SCRIPT_DIR/server.js"
+
+# Detect platform
+PLATFORM=$(uname -s | tr '[:upper:]' '[:lower:]')
+case "$PLATFORM" in
+    darwin) 
+        NODE_BINARY="$SCRIPT_DIR/resources/bin/node"
+        PKTRIOT_BINARY="$SCRIPT_DIR/resources/bin/pktriot"
+        ;;
+    linux)
+        NODE_BINARY="$SCRIPT_DIR/resources/bin/node"
+        PKTRIOT_BINARY="$SCRIPT_DIR/resources/bin/pktriot"
+        ;;
+    mingw*|cygwin*|msys*)
+        NODE_BINARY="$SCRIPT_DIR/resources/bin/node.exe"
+        PKTRIOT_BINARY="$SCRIPT_DIR/resources/bin/pktriot.exe"
+        ;;
+    *)
+        echo -e "${RED}Error: Unsupported platform: $PLATFORM${NC}"
+        exit 1
+        ;;
+esac
 
 echo -e "${BLUE}🎵 Audio Server Startup Script${NC}"
 echo "=================================="
+echo "Platform: $PLATFORM"
+echo "Node binary: $NODE_BINARY"
+echo "Pktriot binary: $PKTRIOT_BINARY"
+echo ""
 
 # Function to cleanup processes on exit
 cleanup() {
@@ -45,10 +69,19 @@ cleanup() {
 # Set up signal handlers
 trap cleanup SIGINT SIGTERM
 
-# Check if Node.js is installed
-if ! command -v node &> /dev/null; then
-    echo -e "${RED}Error: Node.js is not installed${NC}"
-    exit 1
+# Check if bundled Node.js binary exists, fallback to system node
+if [ -f "$NODE_BINARY" ]; then
+    # Set execute permissions for bundled binary
+    chmod +x "$NODE_BINARY" 2>/dev/null || true
+    echo "Using bundled Node.js binary"
+else
+    if command -v node &> /dev/null; then
+        NODE_BINARY="node"
+        echo "Using system Node.js"
+    else
+        echo -e "${RED}Error: Neither bundled nor system Node.js found${NC}"
+        exit 1
+    fi
 fi
 
 # Check if server.js exists
@@ -57,10 +90,19 @@ if [ ! -f "$SERVER_SCRIPT" ]; then
     exit 1
 fi
 
-# Check if pktriot binary exists
-if [ ! -f "$PKTRIOT_BINARY" ]; then
-    echo -e "${RED}Error: pktriot binary not found at $PKTRIOT_BINARY${NC}"
-    exit 1
+# Check if bundled pktriot binary exists
+if [ -f "$PKTRIOT_BINARY" ]; then
+    # Set execute permissions for bundled binary
+    chmod +x "$PKTRIOT_BINARY" 2>/dev/null || true
+    echo "Using bundled pktriot binary"
+else
+    if command -v pktriot &> /dev/null; then
+        PKTRIOT_BINARY="pktriot"
+        echo "Using system pktriot"
+    else
+        echo -e "${YELLOW}Warning: Pktriot binary not found. Tunnel will not be available.${NC}"
+        PKTRIOT_BINARY=""
+    fi
 fi
 
 # Check if port is already in use
@@ -75,11 +117,11 @@ echo -e "${BLUE}Starting services...${NC}"
 # Start Node.js server
 echo "Starting Node.js audio server on port $NODE_PORT..."
 cd "$SCRIPT_DIR"
-node server.js &
+"$NODE_BINARY" server.js &
 NODE_PID=$!
 
 # Wait a moment for the server to start
-sleep 2
+sleep 3
 
 # Check if Node.js server started successfully
 if ! kill -0 $NODE_PID 2>/dev/null; then
@@ -89,7 +131,7 @@ fi
 
 # Test local server
 echo "Testing local server..."
-if curl -s http://localhost:$NODE_PORT/api/files > /dev/null; then
+if curl -s http://localhost:$NODE_PORT/api/status > /dev/null; then
     echo -e "${GREEN}✓ Node.js server is running successfully${NC}"
 else
     echo -e "${RED}Error: Node.js server is not responding${NC}"
@@ -97,34 +139,48 @@ else
     exit 1
 fi
 
-# Start pktriot tunnel
-echo "Starting pktriot tunnel..."
-cd "$PKTRIOT_DIR"
-./pktriot http $NODE_PORT &
-PKTRIOT_PID=$!
-
-# Wait a moment for the tunnel to start
-sleep 3
-
-# Check if pktriot started successfully
-if ! kill -0 $PKTRIOT_PID 2>/dev/null; then
-    echo -e "${RED}Error: Failed to start pktriot tunnel${NC}"
-    kill $NODE_PID 2>/dev/null || true
-    exit 1
+# Start pktriot tunnel if available
+if [ ! -z "$PKTRIOT_BINARY" ]; then
+    echo "Starting pktriot tunnel..."
+    "$PKTRIOT_BINARY" http $NODE_PORT &
+    PKTRIOT_PID=$!
+    
+    # Wait a moment for the tunnel to start
+    sleep 3
+    
+    # Check if pktriot started successfully
+    if ! kill -0 $PKTRIOT_PID 2>/dev/null; then
+        echo -e "${YELLOW}Warning: Failed to start pktriot tunnel (continuing without tunnel)${NC}"
+        PKTRIOT_PID=""
+    else
+        echo -e "${GREEN}✓ Pktriot tunnel is running${NC}"
+    fi
+else
+    PKTRIOT_PID=""
 fi
-
-echo -e "${GREEN}✓ Pktriot tunnel is running${NC}"
 
 # Display status
 echo ""
 echo -e "${GREEN}🚀 Services are running successfully!${NC}"
 echo "=================================="
-echo -e "Local server:  ${BLUE}http://localhost:$NODE_PORT${NC}"
-echo -e "Public URL:    ${BLUE}https://sleepy-thunder-45656.pktriot.net${NC}"
-echo -e "GitHub Pages:  ${BLUE}https://YOUR_USERNAME.github.io/YOUR_REPO_NAME/${NC}"
+echo -e "Local server:     ${BLUE}http://localhost:$NODE_PORT${NC}"
+echo -e "Admin Panel:      ${BLUE}http://localhost:$NODE_PORT/admin-login.html${NC}"
+echo -e "Student Login:    ${BLUE}http://localhost:$NODE_PORT/login.html${NC}"
+echo -e "Super-Admin:      ${BLUE}Use /super-admin/authenticate endpoint${NC}"
+if [ ! -z "$PKTRIOT_PID" ]; then
+    echo -e "Public URL:       ${BLUE}https://sleepy-thunder-45656.pktriot.net${NC}"
+fi
 echo ""
-echo -e "Node.js PID:   ${YELLOW}$NODE_PID${NC}"
-echo -e "Pktriot PID:   ${YELLOW}$PKTRIOT_PID${NC}"
+echo -e "Node.js PID:      ${YELLOW}$NODE_PID${NC}"
+if [ ! -z "$PKTRIOT_PID" ]; then
+    echo -e "Pktriot PID:      ${YELLOW}$PKTRIOT_PID${NC}"
+fi
+echo ""
+echo -e "${GREEN}Multi-Admin System Features:${NC}"
+echo "• Super-admin access with system-wide management"
+echo "• Multiple administrators with isolated data"
+echo "• Invite code system for controlled access"
+echo "• Role-based authentication (super-admin/admin/student)"
 echo ""
 echo -e "${YELLOW}Press Ctrl+C to stop all services${NC}"
 
@@ -136,9 +192,9 @@ while true; do
         cleanup
     fi
     
-    if ! kill -0 $PKTRIOT_PID 2>/dev/null; then
-        echo -e "${RED}Error: Pktriot tunnel stopped unexpectedly${NC}"
-        cleanup
+    if [ ! -z "$PKTRIOT_PID" ] && ! kill -0 $PKTRIOT_PID 2>/dev/null; then
+        echo -e "${YELLOW}Warning: Pktriot tunnel stopped unexpectedly (continuing with local server only)${NC}"
+        PKTRIOT_PID=""
     fi
     
     sleep 5
