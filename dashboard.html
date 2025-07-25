@@ -302,12 +302,44 @@
                 <div class="dashboard-card">
                     <h3>🎵 Currently Available Audio Files</h3>
                     
-                    <!-- Single Audio Player -->
-                    <div id="current-player" style="display: none; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <div id="current-track-name" style="font-weight: bold; margin-bottom: 10px;"></div>
-                        <audio id="main-audio" controls preload="none" style="width: 100%;" controlslist="nodownload">
-                            Your browser does not support the audio element.
-                        </audio>
+                    <!-- Custom Protected Audio Player -->
+                    <div id="current-player" style="display: none; background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 2px solid #e2e8f0;">
+                        <div id="current-track-name" style="font-weight: bold; margin-bottom: 15px; color: #2d3748; font-size: 1.1em;"></div>
+                        
+                        <!-- Custom Audio Player Controls -->
+                        <div id="protected-audio-player" class="protected-player">
+                            <!-- Progress Bar -->
+                            <div class="progress-container" style="margin-bottom: 15px;">
+                                <div class="progress-bar" style="background: #e2e8f0; height: 6px; border-radius: 3px; position: relative; cursor: pointer;" onclick="seekAudio(event)">
+                                    <div class="progress-fill" style="background: #667eea; height: 100%; border-radius: 3px; width: 0%; transition: width 0.1s ease;"></div>
+                                    <div class="progress-handle" style="position: absolute; right: -8px; top: -4px; width: 14px; height: 14px; background: #667eea; border-radius: 50%; cursor: pointer; opacity: 0; transition: opacity 0.2s ease;"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Control Buttons -->
+                            <div class="player-controls" style="display: flex; align-items: center; justify-content: space-between;">
+                                <div class="main-controls" style="display: flex; align-items: center; gap: 15px;">
+                                    <button id="play-pause-btn" class="control-btn" onclick="togglePlayPause()" style="background: #667eea; color: white; border: none; padding: 12px; border-radius: 50%; width: 50px; height: 50px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;">
+                                        ▶️
+                                    </button>
+                                    
+                                    <div class="time-display" style="font-family: monospace; color: #4a5568; font-size: 14px;">
+                                        <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="volume-controls" style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="color: #718096; font-size: 14px;">🔊</span>
+                                    <input type="range" id="volume-slider" min="0" max="100" value="80" oninput="changeVolume(this.value)" style="width: 80px; accent-color: #667eea;">
+                                </div>
+                            </div>
+                            
+                            <!-- Hidden Audio Element -->
+                            <audio id="main-audio" preload="none" style="display: none;">
+                                Your browser does not support the audio element.
+                            </audio>
+                            
+                        </div>
                     </div>
                     
                     <div id="audio-files">No files available at this time.</div>
@@ -592,6 +624,14 @@
             }
         }
 
+        // Global audio state management
+        let currentAudioContext = null;
+        let currentAudioBuffer = null;
+        let currentAudioSource = null;
+        let isPlaying = false;
+        let audioStartTime = 0;
+        let pausedAt = 0;
+
         function playAudio(fileName, audioUrl) {
             const player = document.getElementById('current-player');
             const trackName = document.getElementById('current-track-name');
@@ -600,24 +640,289 @@
             // Show the player
             player.style.display = 'block';
             
-            // Set track name
-            trackName.textContent = `Now Playing: ${fileName}`;
+            // Set track name with protection indicator
+            trackName.textContent = `🔒 Now Playing: ${fileName}`;
             
-            // Add authorization token to audio URL
+            // Add authorization token to audio URL with obfuscation
             const token = localStorage.getItem('authToken');
-            const authenticatedUrl = `${audioUrl}?token=${encodeURIComponent(token)}`;
+            const authenticatedUrl = obfuscateAudioUrl(`${audioUrl}?token=${encodeURIComponent(token)}`);
             
-            // Set audio source
-            audio.src = authenticatedUrl;
+            // Reset player controls
+            resetPlayerControls();
             
-            // Play the audio
+            // Load audio with protection
+            loadProtectedAudio(authenticatedUrl, fileName);
+            
+            console.log(`🎵 Protected playback started: ${fileName}`);
+        }
+
+        function obfuscateAudioUrl(url) {
+            // Add timestamp and random parameters to make URL less predictable
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(2);
+            const obfuscated = `${url}&_t=${timestamp}&_r=${random}&_p=protected`;
+            
+            // Return the obfuscated URL directly (removing base64 encoding that was causing issues)
+            return obfuscated;
+        }
+
+        function loadProtectedAudio(audioUrl, fileName) {
+            const audio = document.getElementById('main-audio');
+            
+            // Use the obfuscated URL directly (no more base64 decoding needed)
+            audio.src = audioUrl;
             audio.load();
-            audio.play().catch(error => {
-                console.error('Error playing audio:', error);
-                alert('Error playing audio file. Please check your connection and try again.');
-            });
+            setupAudioEventListeners(audio, fileName);
+            audio.volume = 0.8;
             
-            console.log(`Playing: ${fileName}`);
+            console.log('🔒 Protected audio loaded successfully');
+        }
+
+        async function loadAudioWithWebAPI(url, audioElement, fileName) {
+            try {
+                // Create or get Web Audio context
+                if (!currentAudioContext) {
+                    currentAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                // Resume context if suspended (required by some browsers)
+                if (currentAudioContext.state === 'suspended') {
+                    await currentAudioContext.resume();
+                }
+
+                // Fetch audio data with additional protection headers
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                        'X-Audio-Protection': 'encrypted-stream',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch audio: ${response.status}`);
+                }
+
+                // Get audio data as array buffer
+                const arrayBuffer = await response.arrayBuffer();
+                
+                // Create encrypted blob for additional protection
+                const encryptedBlob = createEncryptedBlob(arrayBuffer, fileName);
+                
+                // Create object URL from encrypted blob
+                const blobUrl = URL.createObjectURL(encryptedBlob);
+                
+                // Set up audio element with blob URL
+                audioElement.src = blobUrl;
+                audioElement.load();
+                
+                // Add event listeners for custom controls
+                setupAudioEventListeners(audioElement, fileName);
+                
+                // Set initial volume
+                audioElement.volume = 0.8;
+                
+                // Clean up blob URL after audio loads
+                audioElement.addEventListener('loadeddata', () => {
+                    // Revoke the object URL after a delay to prevent memory leaks
+                    setTimeout(() => {
+                        URL.revokeObjectURL(blobUrl);
+                    }, 1000);
+                }, { once: true });
+
+                console.log('🔒 Audio loaded with Web Audio API protection');
+
+            } catch (error) {
+                console.error('Web Audio API loading failed:', error);
+                throw error; // Re-throw to trigger fallback
+            }
+        }
+
+        function createEncryptedBlob(arrayBuffer, fileName) {
+            // Simple encryption/obfuscation for the blob
+            const uint8Array = new Uint8Array(arrayBuffer);
+            const key = generateSimpleKey(fileName);
+            
+            // XOR encryption (simple but effective for our purpose)
+            const encryptedArray = new Uint8Array(uint8Array.length);
+            for (let i = 0; i < uint8Array.length; i++) {
+                encryptedArray[i] = uint8Array[i] ^ key[i % key.length];
+            }
+            
+            // Create blob with encrypted data
+            return new Blob([encryptedArray], { type: 'audio/mpeg' });
+        }
+
+        function generateSimpleKey(fileName) {
+            // Generate a simple key based on filename and timestamp
+            const baseKey = `${fileName}-${Date.now()}`;
+            const encoder = new TextEncoder();
+            return encoder.encode(baseKey);
+        }
+
+        // Enhanced Web Audio API functions for future use
+        async function playWithWebAudioAPI(audioBuffer) {
+            try {
+                if (!currentAudioContext) {
+                    currentAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                if (currentAudioContext.state === 'suspended') {
+                    await currentAudioContext.resume();
+                }
+
+                // Stop any currently playing source
+                if (currentAudioSource) {
+                    currentAudioSource.stop();
+                }
+
+                // Create buffer source
+                currentAudioSource = currentAudioContext.createBufferSource();
+                currentAudioSource.buffer = audioBuffer;
+                
+                // Create gain node for volume control
+                const gainNode = currentAudioContext.createGain();
+                gainNode.gain.value = 0.8;
+                
+                // Connect nodes
+                currentAudioSource.connect(gainNode);
+                gainNode.connect(currentAudioContext.destination);
+                
+                // Start playback
+                currentAudioSource.start();
+                
+                return currentAudioSource;
+                
+            } catch (error) {
+                console.error('Web Audio API playback error:', error);
+                throw error;
+            }
+        }
+
+        function setupAudioEventListeners(audio, fileName) {
+            // Remove any existing listeners
+            audio.removeEventListener('loadedmetadata', updateDuration);
+            audio.removeEventListener('timeupdate', updateProgress);
+            audio.removeEventListener('ended', onAudioEnded);
+            audio.removeEventListener('error', onAudioError);
+            
+            // Add new listeners
+            audio.addEventListener('loadedmetadata', updateDuration);
+            audio.addEventListener('timeupdate', updateProgress);
+            audio.addEventListener('ended', onAudioEnded);
+            audio.addEventListener('error', onAudioError);
+            
+            // Prevent right-click on audio element
+            audio.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                showProtectionWarning('Audio controls are protected');
+                return false;
+            });
+        }
+
+        function togglePlayPause() {
+            const audio = document.getElementById('main-audio');
+            const playBtn = document.getElementById('play-pause-btn');
+            
+            if (audio.paused) {
+                audio.play().then(() => {
+                    playBtn.textContent = '⏸️';
+                    isPlaying = true;
+                }).catch(error => {
+                    console.error('Error playing audio:', error);
+                    showProtectionWarning('Error playing audio file');
+                });
+            } else {
+                audio.pause();
+                playBtn.textContent = '▶️';
+                isPlaying = false;
+            }
+        }
+
+        function seekAudio(event) {
+            const audio = document.getElementById('main-audio');
+            const progressBar = event.currentTarget;
+            const rect = progressBar.getBoundingClientRect();
+            const percent = (event.clientX - rect.left) / rect.width;
+            
+            if (audio.duration) {
+                audio.currentTime = percent * audio.duration;
+            }
+        }
+
+        function changeVolume(value) {
+            const audio = document.getElementById('main-audio');
+            audio.volume = value / 100;
+        }
+
+        function updateDuration() {
+            const audio = document.getElementById('main-audio');
+            const totalTimeSpan = document.getElementById('total-time');
+            
+            if (audio.duration) {
+                totalTimeSpan.textContent = formatTime(audio.duration);
+            }
+        }
+
+        function updateProgress() {
+            const audio = document.getElementById('main-audio');
+            const progressFill = document.querySelector('.progress-fill');
+            const currentTimeSpan = document.getElementById('current-time');
+            const progressHandle = document.querySelector('.progress-handle');
+            
+            if (audio.duration) {
+                const percent = (audio.currentTime / audio.duration) * 100;
+                progressFill.style.width = percent + '%';
+                currentTimeSpan.textContent = formatTime(audio.currentTime);
+                
+                // Show handle when hovering over progress bar
+                const progressContainer = document.querySelector('.progress-container');
+                progressContainer.addEventListener('mouseenter', () => {
+                    progressHandle.style.opacity = '1';
+                });
+                progressContainer.addEventListener('mouseleave', () => {
+                    progressHandle.style.opacity = '0';
+                });
+            }
+        }
+
+        function onAudioEnded() {
+            const playBtn = document.getElementById('play-pause-btn');
+            playBtn.textContent = '▶️';
+            isPlaying = false;
+            
+            // Reset progress
+            const progressFill = document.querySelector('.progress-fill');
+            progressFill.style.width = '0%';
+            
+            console.log('🎵 Audio playback completed');
+        }
+
+        function onAudioError(error) {
+            console.error('Audio error:', error);
+            showProtectionWarning('Error loading audio file');
+            resetPlayerControls();
+        }
+
+        function resetPlayerControls() {
+            const playBtn = document.getElementById('play-pause-btn');
+            const progressFill = document.querySelector('.progress-fill');
+            const currentTimeSpan = document.getElementById('current-time');
+            const totalTimeSpan = document.getElementById('total-time');
+            
+            playBtn.textContent = '▶️';
+            progressFill.style.width = '0%';
+            currentTimeSpan.textContent = '0:00';
+            totalTimeSpan.textContent = '0:00';
+            isPlaying = false;
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
         }
 
         function formatDaysOfWeek(dayOfWeek) {
@@ -682,6 +987,199 @@
             localStorage.removeItem('authToken');
             window.location.href = 'login.html';
         }
+
+        // ===== ENHANCED CLIENT-SIDE PROTECTION =====
+        
+        // Disable right-click context menu on all audio elements and player controls
+        function disableContextMenu() {
+            // Disable context menu on audio elements
+            document.addEventListener('contextmenu', function(e) {
+                const target = e.target;
+                // Block context menu on audio elements, player controls, and their containers
+                if (target.tagName === 'AUDIO' || 
+                    target.classList.contains('audio-player') ||
+                    target.classList.contains('current-player') ||
+                    target.closest('.audio-player') ||
+                    target.closest('.current-player') ||
+                    target.id === 'main-audio') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    showProtectionWarning('Right-click is disabled for audio content');
+                    return false;
+                }
+            });
+
+            // Also disable on audio file items
+            document.addEventListener('contextmenu', function(e) {
+                if (e.target.closest('.audio-file-item')) {
+                    e.preventDefault();
+                    showProtectionWarning('Content is protected from downloading');
+                    return false;
+                }
+            });
+        }
+
+        // Disable common keyboard shortcuts for downloading/saving
+        function disableKeyboardShortcuts() {
+            document.addEventListener('keydown', function(e) {
+                // Disable Ctrl+S (Save), Ctrl+Shift+S (Save As), F12 (DevTools), etc.
+                if ((e.ctrlKey || e.metaKey) && (
+                    e.key === 's' || e.key === 'S' ||
+                    e.key === 'a' || e.key === 'A' ||
+                    e.key === 'u' || e.key === 'U' ||
+                    e.key === 'i' || e.key === 'I'
+                )) {
+                    // Allow normal page operations but show warning for audio areas
+                    const activeElement = document.activeElement;
+                    if (activeElement && (
+                        activeElement.tagName === 'AUDIO' ||
+                        activeElement.closest('.audio-player') ||
+                        activeElement.closest('.current-player')
+                    )) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        showProtectionWarning('Keyboard shortcuts are disabled for audio content');
+                        return false;
+                    }
+                }
+
+                // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J (Developer Tools)
+                if (e.key === 'F12' || 
+                    (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))) {
+                    e.preventDefault();
+                    showProtectionWarning('Developer tools access is restricted');
+                    return false;
+                }
+            });
+        }
+
+        // Disable text selection on audio player areas
+        function disableTextSelection() {
+            const style = document.createElement('style');
+            style.textContent = `
+                .audio-player, .current-player, .audio-file-item, #main-audio {
+                    -webkit-user-select: none !important;
+                    -moz-user-select: none !important;
+                    -ms-user-select: none !important;
+                    user-select: none !important;
+                    -webkit-touch-callout: none !important;
+                    -webkit-tap-highlight-color: transparent !important;
+                }
+                
+                /* Hide audio controls that might expose download options */
+                audio::-webkit-media-controls-download-button {
+                    display: none !important;
+                }
+                
+                audio::-webkit-media-controls-enclosure {
+                    overflow: hidden !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Show protection warning message
+        function showProtectionWarning(message) {
+            // Create or update warning element
+            let warning = document.getElementById('protection-warning');
+            if (!warning) {
+                warning = document.createElement('div');
+                warning.id = 'protection-warning';
+                warning.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: #f56565;
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    z-index: 10000;
+                    box-shadow: 0 4px 12px rgba(245, 101, 101, 0.3);
+                    transform: translateX(100%);
+                    transition: transform 0.3s ease;
+                `;
+                document.body.appendChild(warning);
+            }
+
+            warning.textContent = `🔒 ${message}`;
+            warning.style.transform = 'translateX(0)';
+
+            // Auto-hide after 3 seconds
+            setTimeout(() => {
+                warning.style.transform = 'translateX(100%)';
+            }, 3000);
+        }
+
+        // Detect and prevent common download attempts
+        function detectDownloadAttempts() {
+            // Monitor for attempts to access audio src directly
+            const originalAudioSrcSetter = HTMLAudioElement.prototype.__lookupSetter__('src');
+            if (originalAudioSrcSetter) {
+                Object.defineProperty(HTMLAudioElement.prototype, 'src', {
+                    set: function(value) {
+                        // Log access attempt but allow it (we'll obfuscate the URL anyway)
+                        console.log('🔍 Audio src access detected');
+                        return originalAudioSrcSetter.call(this, value);
+                    },
+                    get: function() {
+                        // Return obfuscated or empty value to prevent URL exposure
+                        return '';
+                    }
+                });
+            }
+
+            // Monitor network requests for audio files
+            const originalFetch = window.fetch;
+            window.fetch = function(...args) {
+                const url = args[0];
+                if (typeof url === 'string' && url.match(/\.(mp3|wav|m4a|aac)$/i)) {
+                    console.log('🔍 Direct audio fetch attempt detected:', url);
+                    showProtectionWarning('Direct audio access is not permitted');
+                }
+                return originalFetch.apply(this, args);
+            };
+        }
+
+        // Prevent drag and drop of audio elements
+        function preventDragDrop() {
+            document.addEventListener('dragstart', function(e) {
+                if (e.target.tagName === 'AUDIO' || e.target.closest('.audio-player')) {
+                    e.preventDefault();
+                    showProtectionWarning('Audio content cannot be dragged');
+                    return false;
+                }
+            });
+
+            document.addEventListener('drop', function(e) {
+                e.preventDefault();
+                return false;
+            });
+        }
+
+        // Watermark overlay for additional protection visibility (removed as requested)
+        function addWatermark() {
+            // Watermark removed to improve user experience
+            console.log('🔒 Audio protection active (watermark disabled)');
+        }
+
+        // Initialize all protection measures
+        function initializeProtection() {
+            disableContextMenu();
+            disableKeyboardShortcuts();
+            disableTextSelection();
+            detectDownloadAttempts();
+            preventDragDrop();
+            addWatermark();
+            
+            console.log('🔒 Enhanced client-side protection activated');
+        }
+
+        // Initialize protection when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeProtection();
+        });
     </script>
 </body>
 </html>
