@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Server - Welcome</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .landing-container {
+            background: white;
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #4a5568;
+            font-size: 3em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.2em;
+            line-height: 1.5;
+        }
+
+        .auth-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+
+        .auth-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px 20px;
+            border: 3px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .auth-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.15);
+        }
+
+        .auth-card-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .auth-card h3 {
+            color: #4a5568;
+            font-size: 1.3em;
+            margin-bottom: 10px;
+        }
+
+        .auth-card p {
+            color: #718096;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        .participant-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .participant-card h3,
+        .participant-card p {
+            color: white;
+        }
+
+        .admin-card:hover {
+            border-color: #f56565;
+        }
+
+        .super-admin-card {
+            background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+            color: white;
+        }
+
+        .super-admin-card h3,
+        .super-admin-card p {
+            color: white;
+        }
+
+        .super-admin-card:hover {
+            border-color: #2d3748;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(45, 55, 72, 0.25);
+        }
+
+        .quick-access {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .quick-access h4 {
+            color: #4a5568;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+        }
+
+        .quick-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .quick-link {
+            color: #667eea;
+            text-decoration: none;
+            padding: 8px 16px;
+            border: 1px solid #667eea;
+            border-radius: 20px;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+
+        .quick-link:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #d4edda;
+            color: #155724;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            margin-bottom: 20px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #48bb78;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @media (max-width: 768px) {
+            .landing-container {
+                padding: 30px 20px;
+            }
+
+            .header h1 {
+                font-size: 2.2em;
+            }
+
+            .auth-options {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .quick-links {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="landing-container">
+        <div class="header">
+            <h1>🎵 Audio Server</h1>
+            <p>Welcome to the scheduled audio streaming platform</p>
+            
+            <div class="status-indicator" id="server-status">
+                <span class="status-dot"></span>
+                <span>Server Online</span>
+            </div>
+        </div>
+
+        <div class="auth-options" id="auth-options">
+            <a href="login.html" class="auth-card participant-card">
+                <div class="auth-card-icon">👥</div>
+                <h3>Student Login</h3>
+                <p>Access your assigned audio schedules and listen to available content</p>
+            </a>
+
+            <a href="admin-login.html" class="auth-card admin-card" id="admin-card">
+                <div class="auth-card-icon">⚙️</div>
+                <h3>Admin Panel</h3>
+                <p>Manage your collections, schedules, and students</p>
+            </a>
+
+            <a href="super-admin-login.html" class="auth-card super-admin-card" id="super-admin-card">
+                <div class="auth-card-icon">🔐</div>
+                <h3>Super Admin</h3>
+                <p>System-wide management and administrator control</p>
+            </a>
+        </div>
+
+        <div class="quick-access">
+            <h4>Quick Access</h4>
+            <div class="quick-links" id="quick-links">
+                <a href="register.html" class="quick-link">Student Registration</a>
+                <a href="admin-register.html" class="quick-link" id="admin-register-link">Admin Registration</a>
+                <a href="#" class="quick-link" onclick="window.open(`${SERVER_URL}/api/status`, '_blank')" id="server-status-link">Server Status</a>
+            </div>
+        </div>
+
+        <div id="current-files-info" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 10px; display: none;">
+            <h5 style="color: #4a5568; margin-bottom: 10px;">Currently Available Files</h5>
+            <div id="files-list">Loading...</div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-detect server URL based on current location
+        let SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
+            ? 'http://localhost:8000' 
+            : 'https://misty-sunset-29095.pktriot.net';
+        
+        // Store the working port for subsequent requests
+        let workingPort = null;
+        
+        // Check server status on load and hide super admin on GitHub Pages
+        document.addEventListener('DOMContentLoaded', function() {
+            checkServerStatus();
+            hideElementsOnGitHubPages();
+        });
+
+        async function findWorkingPort() {
+            // Try common ports if we're on localhost
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                const ports = [8000, 8001, 8002, 8003, 8004, 8005];
+                
+                for (const port of ports) {
+                    try {
+                        const testUrl = `http://localhost:${port}`;
+                        const response = await fetch(`${testUrl}/api/health`, { 
+                            signal: AbortSignal.timeout(2000) // 2 second timeout
+                        });
+                        
+                        if (response.ok) {
+                            workingPort = port;
+                            SERVER_URL = testUrl;
+                            console.log(`✅ Found working server on port ${port}`);
+                            return testUrl;
+                        }
+                    } catch (error) {
+                        // Continue trying other ports
+                    }
+                }
+            }
+            
+            // Fall back to original URL
+            return SERVER_URL;
+        }
+
+        async function checkServerStatus() {
+            try {
+                // First try to find a working port if we haven't already
+                if (!workingPort) {
+                    SERVER_URL = await findWorkingPort();
+                }
+                
+                const response = await fetch(`${SERVER_URL}/api/status`);
+                const status = await response.json();
+                
+                const indicator = document.getElementById('server-status');
+                if (response.ok) {
+                    indicator.innerHTML = `
+                        <span class="status-dot"></span>
+                        <span>Server Online (Port ${workingPort || '8000'})</span>
+                    `;
+                } else {
+                    throw new Error('Server offline');
+                }
+            } catch (error) {
+                const indicator = document.getElementById('server-status');
+                indicator.style.background = '#f8d7da';
+                indicator.style.color = '#721c24';
+                indicator.innerHTML = `
+                    <span class="status-dot" style="background: #f56565;"></span>
+                    <span>Server Offline</span>
+                `;
+            }
+        }
+
+        async function showCurrentFiles() {
+            const filesInfo = document.getElementById('current-files-info');
+            const filesList = document.getElementById('files-list');
+            
+            if (filesInfo.style.display === 'none') {
+                filesInfo.style.display = 'block';
+                
+                try {
+                    const response = await fetch(`${SERVER_URL}/api/files`);
+                    const data = await response.json();
+                    
+                    if (data.audioFiles && data.audioFiles.length > 0) {
+                        filesList.innerHTML = data.audioFiles.map(file => 
+                            `<div style="padding: 5px 0; color: #4a5568;">🎵 ${file.name}</div>`
+                        ).join('');
+                    } else {
+                        filesList.innerHTML = '<div style="color: #718096;">No files currently available</div>';
+                    }
+                } catch (error) {
+                    filesList.innerHTML = '<div style="color: #e53e3e;">Error loading files</div>';
+                }
+            } else {
+                filesInfo.style.display = 'none';
+            }
+        }
+
+        function hideElementsOnGitHubPages() {
+            // Check if we're on GitHub Pages (github.io domain)
+            const isGitHubPages = window.location.hostname.includes('github.io');
+            
+            if (isGitHubPages) {
+                // Hide only the Super Admin panel on GitHub Pages
+                const superAdminCard = document.getElementById('super-admin-card');
+                if (superAdminCard) {
+                    superAdminCard.style.display = 'none';
+                }
+                
+                // Also hide server status link since it won't work on static hosting
+                const serverStatusLink = document.getElementById('server-status-link');
+                if (serverStatusLink) {
+                    serverStatusLink.style.display = 'none';
+                }
+            }
+        }
+
+        // Auto-refresh server status every 30 seconds
+        setInterval(checkServerStatus, 30000);
+    </script>
+</body>
+</html>

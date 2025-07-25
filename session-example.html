@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Manager Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .session-info {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .log {
+            background-color: #000;
+            color: #00ff00;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Dynamic Port Allocation - Session Manager</h1>
+        
+        <div class="status info">
+            <strong>How it works:</strong>
+            <ul>
+                <li>Click "Initialize Session" to get your dedicated port and tunnel</li>
+                <li>The system will automatically send heartbeats every 30 seconds</li>
+                <li>If you close the tab, the session will be marked for immediate cleanup</li>
+                <li>You can manually release the session or it will auto-cleanup after inactivity</li>
+            </ul>
+        </div>
+        
+        <div class="session-info">
+            <h3>Session Information</h3>
+            <div id="session-status">Not initialized</div>
+            <div id="session-details"></div>
+        </div>
+        
+        <div>
+            <button id="initBtn" onclick="initializeSession()">Initialize Session</button>
+            <button id="releaseBtn" onclick="releaseSession()" disabled>Release Session</button>
+            <button id="testBtn" onclick="testApiCall()" disabled>Test API Call</button>
+            <button id="clearLogBtn" onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div class="status warning">
+            <strong>⚠️ Tab Closure Test:</strong> Try closing this tab after initializing a session. 
+            The session should be automatically marked for cleanup within 30 seconds.
+        </div>
+        
+        <h3>📋 Activity Log</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script src="session-manager.js"></script>
+    <script>
+        let sessionManager = null;
+        
+        // Initialize session
+        async function initializeSession() {
+            try {
+                log('🚀 Initializing session...');
+                updateStatus('Initializing...', 'info');
+                
+                sessionManager = new SessionManager();
+                const sessionInfo = await sessionManager.initializeSession();
+                
+                log(`✅ Session initialized successfully!`);
+                log(`   Session ID: ${sessionInfo.sessionId}`);
+                log(`   Tunnel URL: ${sessionInfo.tunnelUrl}`);
+                log(`   Port: ${sessionInfo.port}`);
+                
+                updateStatus('Session Active', 'success');
+                updateSessionDetails(sessionInfo);
+                updateButtons(true);
+                
+            } catch (error) {
+                log(`❌ Session initialization failed: ${error.message}`);
+                updateStatus('Initialization Failed', 'error');
+                updateButtons(false);
+            }
+        }
+        
+        // Release session
+        async function releaseSession() {
+            try {
+                log('🧹 Releasing session...');
+                updateStatus('Releasing...', 'info');
+                
+                if (sessionManager) {
+                    await sessionManager.releaseSession();
+                    log('✅ Session released successfully');
+                    updateStatus('Session Released', 'success');
+                } else {
+                    log('⚠️ No active session to release');
+                    updateStatus('No Active Session', 'warning');
+                }
+                
+                updateButtons(false);
+                updateSessionDetails(null);
+                
+            } catch (error) {
+                log(`❌ Session release failed: ${error.message}`);
+                updateStatus('Release Failed', 'error');
+            }
+        }
+        
+        // Test API call using the allocated tunnel
+        async function testApiCall() {
+            try {
+                log('📡 Testing API call via tunnel...');
+                
+                if (!sessionManager || !sessionManager.isInitialized) {
+                    log('❌ No active session for API call');
+                    return;
+                }
+                
+                const response = await sessionManager.apiCall('/health');
+                const data = await response.json();
+                
+                log(`✅ API call successful!`);
+                log(`   Response: ${JSON.stringify(data, null, 2)}`);
+                
+            } catch (error) {
+                log(`❌ API call failed: ${error.message}`);
+            }
+        }
+        
+        // Update UI status
+        function updateStatus(message, type) {
+            const statusDiv = document.getElementById('session-status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+        }
+        
+        // Update session details
+        function updateSessionDetails(sessionInfo) {
+            const detailsDiv = document.getElementById('session-details');
+            
+            if (sessionInfo) {
+                detailsDiv.innerHTML = `
+                    <strong>Session ID:</strong> ${sessionInfo.sessionId}<br>
+                    <strong>Tunnel URL:</strong> <a href="${sessionInfo.tunnelUrl}" target="_blank">${sessionInfo.tunnelUrl}</a><br>
+                    <strong>Port:</strong> ${sessionInfo.port}
+                `;
+            } else {
+                detailsDiv.innerHTML = '';
+            }
+        }
+        
+        // Update button states
+        function updateButtons(sessionActive) {
+            document.getElementById('initBtn').disabled = sessionActive;
+            document.getElementById('releaseBtn').disabled = !sessionActive;
+            document.getElementById('testBtn').disabled = !sessionActive;
+        }
+        
+        // Log function
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.textContent += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        // Clear log
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+        
+        // Initialize UI
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🎬 Session Manager Example loaded');
+            updateStatus('Ready to initialize', 'info');
+            
+            // Override console.log to show in our log div
+            const originalLog = console.log;
+            console.log = function(...args) {
+                originalLog.apply(console, args);
+                log(args.join(' '));
+            };
+        });
+        
+        // Handle page unload
+        window.addEventListener('beforeunload', () => {
+            log('📴 Page is being unloaded - session cleanup will be handled automatically');
+        });
+    </script>
+</body>
+</html>
