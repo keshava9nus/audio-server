@@ -352,20 +352,45 @@
         let userToken = localStorage.getItem('authToken');
         let currentUser = null;
 
-        // Main server URL (for authentication, admin tasks)
+        // Multi-server architecture configuration
         const MAIN_SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
             ? 'http://localhost:8000' 
             : 'https://misty-sunset-29095.pktriot.net';
         
         // For GitHub Pages deployment, override with your actual server URL
         const isGitHubPages = window.location.hostname.includes('github.io');
-        const PRODUCTION_SERVER_URL = isGitHubPages ? 'https://misty-sunset-29095.pktriot.net' : MAIN_SERVER_URL;
+        const MAIN_SERVER = isGitHubPages ? 'https://misty-sunset-29095.pktriot.net' : MAIN_SERVER_URL;
         
-        // Streaming server URL (will be updated after login)
-        let STREAMING_SERVER_URL = isGitHubPages ? PRODUCTION_SERVER_URL : MAIN_SERVER_URL;
+        // Streaming server URL - will be set from tunnel assignment after login
+        let STREAMING_SERVER = localStorage.getItem('assignedTunnel') 
+            ? `https://${localStorage.getItem('assignedTunnel')}` 
+            : MAIN_SERVER;
         
-        // Legacy API_BASE_URL for backward compatibility
-        const API_BASE_URL = isGitHubPages ? PRODUCTION_SERVER_URL : MAIN_SERVER_URL;
+        // Legacy API_BASE_URL for backward compatibility (now points to main server)
+        const API_BASE_URL = MAIN_SERVER;
+        
+        // Smart routing function - determines which server to use based on request type
+        function getServerUrl(endpoint) {
+            // Audio file requests go to streaming server
+            if (endpoint.includes('.mp3') || endpoint.includes('.m4a') || endpoint.includes('.wav') || endpoint.includes('.aac')) {
+                console.log(`🎵 Audio request routed to streaming server: ${STREAMING_SERVER}${endpoint}`);
+                console.log(`🔍 STREAMING_SERVER value: "${STREAMING_SERVER}"`);
+                console.log(`🔍 Assigned tunnel from localStorage: "${localStorage.getItem('assignedTunnel')}"`);
+                return STREAMING_SERVER;
+            }
+            // All other API calls go to main server
+            console.log(`📡 API request routed to main server: ${MAIN_SERVER}${endpoint}`);
+            return MAIN_SERVER;
+        }
+        
+        // Update streaming server from tunnel assignment
+        function updateStreamingServer(assignedTunnel) {
+            if (assignedTunnel) {
+                STREAMING_SERVER = `https://${assignedTunnel}`;
+                localStorage.setItem('assignedTunnel', assignedTunnel);
+                console.log(`🎯 Streaming server updated: ${STREAMING_SERVER}`);
+            }
+        }
         
         // Check authentication on load
         if (!userToken) {
@@ -373,6 +398,12 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            // Check if tunnel assignment has been updated
+            const storedTunnel = localStorage.getItem('assignedTunnel');
+            if (storedTunnel && storedTunnel !== STREAMING_SERVER.replace('https://', '')) {
+                updateStreamingServer(storedTunnel);
+            }
+            
             loadDashboard();
             setInterval(refreshAudioFiles, 30000); // Refresh every 30 seconds
         });
@@ -564,7 +595,7 @@
                 const filesHtml = collection.files.map(file => `
                     <div class="audio-file-item">
                         <div class="audio-title" style="flex: 1; font-weight: 500;">${file.name}</div>
-                        <button class="play-btn" onclick="playAudio('${file.name}', '${API_BASE_URL}/student/${encodeURIComponent(file.name)}')">
+                        <button class="play-btn" onclick="playAudio('${file.name}', '${STREAMING_SERVER}/student/${encodeURIComponent(file.name)}')">
                             ▶ Play
                         </button>
                     </div>
@@ -599,7 +630,7 @@
             container.innerHTML = files.map((file, index) => `
                 <div class="audio-file-item">
                     <div class="audio-title" style="flex: 1; font-weight: 500;">${file.name}</div>
-                    <button class="play-btn" onclick="playAudio('${file.name}', '${API_BASE_URL}/student/${encodeURIComponent(file.name)}')">
+                    <button class="play-btn" onclick="playAudio('${file.name}', '${STREAMING_SERVER}/student/${encodeURIComponent(file.name)}')">
                         ▶ Play
                     </button>
                 </div>
@@ -633,9 +664,17 @@
         let pausedAt = 0;
 
         function playAudio(fileName, audioUrl) {
+            console.log(`🎬 === AUDIO DEBUGGING STARTED ===`);
+            console.log(`🎵 Playing audio: "${fileName}"`);
+            console.log(`🔗 Original URL: "${audioUrl}"`);
+            
             const player = document.getElementById('current-player');
             const trackName = document.getElementById('current-track-name');
             const audio = document.getElementById('main-audio');
+            
+            console.log(`🔍 Player element found: ${!!player}`);
+            console.log(`🔍 Track name element found: ${!!trackName}`);
+            console.log(`🔍 Audio element found: ${!!audio}`);
             
             // Show the player
             player.style.display = 'block';
@@ -645,7 +684,12 @@
             
             // Add authorization token to audio URL with obfuscation
             const token = localStorage.getItem('authToken');
+            console.log(`🔑 Auth token exists: ${!!token}`);
+            console.log(`🔑 Token length: ${token ? token.length : 0}`);
+            console.log(`🔑 Token preview: ${token ? token.substring(0, 20) + '...' : 'null'}`);
+            
             const authenticatedUrl = obfuscateAudioUrl(`${audioUrl}?token=${encodeURIComponent(token)}`);
+            console.log(`🔗 Final authenticated URL: "${authenticatedUrl}"`);
             
             // Reset player controls
             resetPlayerControls();
@@ -654,6 +698,7 @@
             loadProtectedAudio(authenticatedUrl, fileName);
             
             console.log(`🎵 Protected playback started: ${fileName}`);
+            console.log(`🎬 === AUDIO DEBUGGING COMPLETED ===`);
         }
 
         function obfuscateAudioUrl(url) {
@@ -969,7 +1014,8 @@
                 options.body = JSON.stringify(data);
             }
             
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+            const serverUrl = getServerUrl(endpoint);
+            const response = await fetch(`${serverUrl}${endpoint}`, options);
             
             if (response.status === 401) {
                 logout();
