@@ -300,6 +300,48 @@
                             <p>Available Files: <span id="available-files">0</span></p>
                         </div>
                     </div>
+
+                    <div class="dashboard-card">
+                        <h3>🔒 Account Settings</h3>
+                        <div id="account-settings">
+                            <div style="margin-bottom: 15px;">
+                                <button id="change-password-btn" onclick="showPasswordChangeForm()" style="background: #667eea; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer; font-size: 0.9em;">
+                                    Change Password
+                                </button>
+                            </div>
+                            
+                            <!-- Password Change Form (Hidden by default) -->
+                            <div id="password-change-form" style="display: none; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                                <h4 style="margin-top: 0; color: #4a5568;">Change Your Password</h4>
+                                <div id="password-change-message" style="margin-bottom: 10px; display: none; padding: 10px; border-radius: 5px;"></div>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Current Password:</label>
+                                    <input type="password" id="current-password" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 14px;" required>
+                                </div>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">New Password:</label>
+                                    <input type="password" id="new-password" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 14px;" required minlength="6">
+                                    <small style="color: #718096; font-size: 12px;">Must be at least 6 characters long</small>
+                                </div>
+                                
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Confirm New Password:</label>
+                                    <input type="password" id="confirm-password" style="width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 4px; font-size: 14px;" required minlength="6">
+                                </div>
+                                
+                                <div style="display: flex; gap: 10px;">
+                                    <button onclick="changePassword()" style="background: #48bb78; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                                        Update Password
+                                    </button>
+                                    <button onclick="hidePasswordChangeForm()" style="background: #a0aec0; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 14px;">
+                                        Cancel
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="dashboard-card">
@@ -1256,6 +1298,82 @@
         function addWatermark() {
             // Watermark removed to improve user experience
             console.log('🔒 Audio protection active (watermark disabled)');
+        }
+
+        // Password change functionality
+        function showPasswordChangeForm() {
+            document.getElementById('password-change-form').style.display = 'block';
+            document.getElementById('change-password-btn').style.display = 'none';
+            // Clear previous values
+            document.getElementById('current-password').value = '';
+            document.getElementById('new-password').value = '';
+            document.getElementById('confirm-password').value = '';
+            hidePasswordMessage();
+        }
+
+        function hidePasswordChangeForm() {
+            document.getElementById('password-change-form').style.display = 'none';
+            document.getElementById('change-password-btn').style.display = 'block';
+            hidePasswordMessage();
+        }
+
+        function showPasswordMessage(message, isError = false) {
+            const messageDiv = document.getElementById('password-change-message');
+            messageDiv.textContent = message;
+            messageDiv.style.display = 'block';
+            messageDiv.style.background = isError ? '#fed7d7' : '#c6f6d5';
+            messageDiv.style.color = isError ? '#c53030' : '#22543d';
+            messageDiv.style.border = isError ? '1px solid #feb2b2' : '1px solid #9ae6b4';
+        }
+
+        function hidePasswordMessage() {
+            document.getElementById('password-change-message').style.display = 'none';
+        }
+
+        async function changePassword() {
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            // Validate input
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showPasswordMessage('Please fill in all password fields.', true);
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                showPasswordMessage('New password must be at least 6 characters long.', true);
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showPasswordMessage('New password and confirmation do not match.', true);
+                return;
+            }
+
+            try {
+                // Get the server URL for API calls
+                const serverUrl = getServerUrl('/student/change-password');
+                
+                const response = await apiCall('/student/change-password', 'POST', {
+                    currentPassword: currentPassword,
+                    newPassword: newPassword
+                });
+
+                if (response.success) {
+                    showPasswordMessage('Password changed successfully!', false);
+                    // Clear form after success
+                    setTimeout(() => {
+                        hidePasswordChangeForm();
+                    }, 2000);
+                } else {
+                    showPasswordMessage(response.error || 'Failed to change password.', true);
+                }
+
+            } catch (error) {
+                console.error('Password change error:', error);
+                showPasswordMessage('Failed to change password. Please try again.', true);
+            }
         }
 
         // Initialize all protection measures
