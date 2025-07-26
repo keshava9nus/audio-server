@@ -405,16 +405,11 @@
         
         // Smart routing function - determines which server to use based on request type
         function getServerUrl(endpoint) {
-            // Audio file requests go to streaming server
-            if (endpoint.includes('.mp3') || endpoint.includes('.m4a') || endpoint.includes('.wav') || endpoint.includes('.aac')) {
-                console.log(`🎵 Audio request routed to streaming server: ${STREAMING_SERVER}${endpoint}`);
-                console.log(`🔍 STREAMING_SERVER value: "${STREAMING_SERVER}"`);
-                console.log(`🔍 Assigned tunnel from localStorage: "${localStorage.getItem('assignedTunnel')}"`);
-                return STREAMING_SERVER;
-            }
-            // All other API calls go to main server
-            console.log(`📡 API request routed to main server: ${MAIN_SERVER}${endpoint}`);
-            return MAIN_SERVER;
+            // Route ALL API calls to the assigned streaming server to eliminate main server bottleneck
+            console.log(`🎯 All requests routed to streaming server: ${STREAMING_SERVER}${endpoint}`);
+            console.log(`🔍 STREAMING_SERVER value: "${STREAMING_SERVER}"`);
+            console.log(`🔍 Assigned tunnel from localStorage: "${localStorage.getItem('assignedTunnel')}"`);
+            return STREAMING_SERVER;
         }
         
         // Update streaming server from tunnel assignment
