@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Audio Server</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Dashboard - Audio Server (Debug v2)</title>
     <style>
         * {
             margin: 0;
@@ -361,10 +364,41 @@
         const isGitHubPages = window.location.hostname.includes('github.io');
         const MAIN_SERVER = isGitHubPages ? 'https://misty-sunset-29095.pktriot.net' : MAIN_SERVER_URL;
         
-        // Streaming server URL - will be set from tunnel assignment after login
-        let STREAMING_SERVER = localStorage.getItem('assignedTunnel') 
-            ? `https://${localStorage.getItem('assignedTunnel')}` 
-            : MAIN_SERVER;
+        // Streaming server URL - FORCE localhost for development debugging
+        let STREAMING_SERVER;
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
+        console.log(`🔍 Window hostname: "${window.location.hostname}"`);
+        console.log(`🔍 Is localhost: ${isLocalhost}`);
+        
+        if (isLocalhost) {
+            // FORCE localhost development mode - override any stored tunnel assignments
+            console.log(`🔧 FORCING localhost development mode`);
+            
+            // Map PKTRiot domains to stream IDs
+            const assignedTunnel = localStorage.getItem('assignedTunnel');
+            console.log(`🔍 Stored assignedTunnel: "${assignedTunnel}"`);
+            
+            let tunnelId = 'stream1'; // Default
+            if (assignedTunnel) {
+                if (assignedTunnel.includes('small-shape-93309')) tunnelId = 'stream1';
+                else if (assignedTunnel.includes('snowy-pond-27673')) tunnelId = 'stream2';
+                else if (assignedTunnel.includes('elastic-shape-41832')) tunnelId = 'stream3';
+                else if (assignedTunnel.includes('late-dawn-03260')) tunnelId = 'stream4';
+            }
+            console.log(`🔍 Mapped tunnelId: "${tunnelId}"`);
+            
+            const portMap = { 'stream1': 8001, 'stream2': 8002, 'stream3': 8003, 'stream4': 8004 };
+            const port = portMap[tunnelId] || 8001;
+            STREAMING_SERVER = `http://localhost:${port}`;
+            console.log(`🔧 FORCED localhost development: Using ${STREAMING_SERVER} for ${tunnelId}`);
+        } else {
+            // For production, use PKTRiot tunnels
+            STREAMING_SERVER = localStorage.getItem('assignedTunnel') 
+                ? `https://${localStorage.getItem('assignedTunnel')}` 
+                : MAIN_SERVER;
+            console.log(`🌐 Production mode: Using ${STREAMING_SERVER}`);
+        }
         
         // Legacy API_BASE_URL for backward compatibility (now points to main server)
         const API_BASE_URL = MAIN_SERVER;
@@ -595,7 +629,7 @@
                 const filesHtml = collection.files.map(file => `
                     <div class="audio-file-item">
                         <div class="audio-title" style="flex: 1; font-weight: 500;">${file.name}</div>
-                        <button class="play-btn" onclick="playAudio('${file.name}', '${STREAMING_SERVER}/student/${encodeURIComponent(file.name)}')">
+                        <button class="play-btn" onclick="playAudio('${file.name}')">
                             ▶ Play
                         </button>
                     </div>
@@ -630,7 +664,7 @@
             container.innerHTML = files.map((file, index) => `
                 <div class="audio-file-item">
                     <div class="audio-title" style="flex: 1; font-weight: 500;">${file.name}</div>
-                    <button class="play-btn" onclick="playAudio('${file.name}', '${STREAMING_SERVER}/student/${encodeURIComponent(file.name)}')">
+                    <button class="play-btn" onclick="playAudio('${file.name}')">
                         ▶ Play
                     </button>
                 </div>
@@ -663,10 +697,19 @@
         let audioStartTime = 0;
         let pausedAt = 0;
 
-        function playAudio(fileName, audioUrl) {
+        function playAudio(fileName, audioUrl = null) {
             console.log(`🎬 === AUDIO DEBUGGING STARTED ===`);
             console.log(`🎵 Playing audio: "${fileName}"`);
+            
+            // Construct URL dynamically if not provided
+            if (!audioUrl) {
+                audioUrl = `${STREAMING_SERVER}/student/${encodeURIComponent(fileName)}`;
+                console.log(`🔧 Constructed URL dynamically: "${audioUrl}"`);
+            }
+            
             console.log(`🔗 Original URL: "${audioUrl}"`);
+            console.log(`🔗 Current STREAMING_SERVER: "${STREAMING_SERVER}"`);
+            console.log(`🔑 Auth token available: ${!!localStorage.getItem('authToken')}`);
             
             const player = document.getElementById('current-player');
             const trackName = document.getElementById('current-track-name');
@@ -712,15 +755,25 @@
         }
 
         function loadProtectedAudio(audioUrl, fileName) {
+            console.log(`🔒 === LOADING PROTECTED AUDIO ===`);
+            console.log(`🔗 Final URL being set: "${audioUrl}"`);
+            
             const audio = document.getElementById('main-audio');
+            console.log(`🔍 Audio element: ${!!audio}`);
+            console.log(`🔍 Current audio src: "${audio.src}"`);
             
             // Use the obfuscated URL directly (no more base64 decoding needed)
             audio.src = audioUrl;
+            console.log(`🔗 Audio src set to: "${audio.src}"`);
+            
             audio.load();
+            console.log(`🔄 Audio load() called`);
+            
             setupAudioEventListeners(audio, fileName);
             audio.volume = 0.8;
             
             console.log('🔒 Protected audio loaded successfully');
+            console.log(`🔒 === LOADING PROTECTED AUDIO COMPLETE ===`);
         }
 
         async function loadAudioWithWebAPI(url, audioElement, fileName) {
