@@ -394,7 +394,7 @@
     </div>
 
     <script>
-        let userToken = localStorage.getItem('authToken');
+        let userToken = sessionStorage.getItem('authToken');
         let currentUser = null;
 
         // Multi-server architecture configuration
@@ -418,7 +418,7 @@
             console.log(`🔧 FORCING localhost development mode`);
             
             // Map PKTRiot domains to stream IDs
-            const assignedTunnel = localStorage.getItem('assignedTunnel');
+            const assignedTunnel = sessionStorage.getItem('assignedTunnel');
             console.log(`🔍 Stored assignedTunnel: "${assignedTunnel}"`);
             
             let tunnelId = 'stream1'; // Default
@@ -436,8 +436,8 @@
             console.log(`🔧 FORCED localhost development: Using ${STREAMING_SERVER} for ${tunnelId}`);
         } else {
             // For production, use PKTRiot tunnels
-            STREAMING_SERVER = localStorage.getItem('assignedTunnel') 
-                ? `https://${localStorage.getItem('assignedTunnel')}` 
+            STREAMING_SERVER = sessionStorage.getItem('assignedTunnel') 
+                ? `https://${sessionStorage.getItem('assignedTunnel')}` 
                 : MAIN_SERVER;
             console.log(`🌐 Production mode: Using ${STREAMING_SERVER}`);
         }
@@ -469,7 +469,7 @@
             } else {
                 console.log(`🎯 Streaming server request: ${STREAMING_SERVER}${endpoint}`);
                 console.log(`🔍 STREAMING_SERVER value: "${STREAMING_SERVER}"`);
-                console.log(`🔍 Assigned tunnel from localStorage: "${localStorage.getItem('assignedTunnel')}"`);
+                console.log(`🔍 Assigned tunnel from localStorage: "${sessionStorage.getItem('assignedTunnel')}"`);
                 return STREAMING_SERVER;
             }
         }
@@ -478,7 +478,7 @@
         function updateStreamingServer(assignedTunnel) {
             if (assignedTunnel) {
                 STREAMING_SERVER = `https://${assignedTunnel}`;
-                localStorage.setItem('assignedTunnel', assignedTunnel);
+                sessionStorage.setItem('assignedTunnel', assignedTunnel);
                 console.log(`🎯 Streaming server updated: ${STREAMING_SERVER}`);
             }
         }
@@ -490,7 +490,7 @@
 
         document.addEventListener('DOMContentLoaded', function() {
             // Check if tunnel assignment has been updated
-            const storedTunnel = localStorage.getItem('assignedTunnel');
+            const storedTunnel = sessionStorage.getItem('assignedTunnel');
             if (storedTunnel && storedTunnel !== STREAMING_SERVER.replace('https://', '')) {
                 updateStreamingServer(storedTunnel);
             }
@@ -502,7 +502,7 @@
         async function loadDashboard() {
             try {
                 // Get user info from token
-                const token = localStorage.getItem('authToken');
+                const token = sessionStorage.getItem('authToken');
                 if (token) {
                     try {
                         const payload = JSON.parse(atob(token.split('.')[1]));
@@ -766,7 +766,7 @@
             
             console.log(`🔗 Original URL: "${audioUrl}"`);
             console.log(`🔗 Current STREAMING_SERVER: "${STREAMING_SERVER}"`);
-            console.log(`🔑 Auth token available: ${!!localStorage.getItem('authToken')}`);
+            console.log(`🔑 Auth token available: ${!!sessionStorage.getItem('authToken')}`);
             
             const player = document.getElementById('current-player');
             const trackName = document.getElementById('current-track-name');
@@ -783,7 +783,7 @@
             trackName.textContent = `🔒 Now Playing: ${fileName}`;
             
             // Add authorization token to audio URL with obfuscation
-            const token = localStorage.getItem('authToken');
+            const token = sessionStorage.getItem('authToken');
             console.log(`🔑 Auth token exists: ${!!token}`);
             console.log(`🔑 Token length: ${token ? token.length : 0}`);
             console.log(`🔑 Token preview: ${token ? token.substring(0, 20) + '...' : 'null'}`);
@@ -849,7 +849,7 @@
                 const response = await fetch(url, {
                     method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+                        'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`,
                         'X-Audio-Protection': 'encrypted-stream',
                         'X-Requested-With': 'XMLHttpRequest'
                     },
@@ -1110,7 +1110,7 @@
         }
 
         async function apiCall(endpoint, method = 'GET', data = null) {
-            const token = localStorage.getItem('authToken');
+            const token = sessionStorage.getItem('authToken');
             const options = {
                 method,
                 headers: {
@@ -1140,7 +1140,7 @@
         }
 
         function logout() {
-            localStorage.removeItem('authToken');
+            sessionStorage.removeItem('authToken');
             window.location.href = 'login.html';
         }
 

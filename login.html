@@ -227,11 +227,11 @@
                 if (response.ok) {
                     showAlert('Login successful! Redirecting...', 'success');
                     // Store token and tunnel assignment
-                    localStorage.setItem('authToken', result.token);
+                    sessionStorage.setItem('authToken', result.token);
                     
                     // Store assigned tunnel for streaming server routing
                     if (result.assignedTunnel && result.assignedTunnel.tunnelUrl) {
-                        localStorage.setItem('assignedTunnel', result.assignedTunnel.tunnelUrl);
+                        sessionStorage.setItem('assignedTunnel', result.assignedTunnel.tunnelUrl);
                         console.log(`🎯 Assigned to streaming tunnel: ${result.assignedTunnel.tunnelUrl}`);
                     }
                     
