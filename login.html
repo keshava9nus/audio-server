@@ -235,9 +235,12 @@
                         console.log(`🎯 Assigned to streaming tunnel: ${result.assignedTunnel.tunnelUrl}`);
                     }
                     
+                    // Add debugging and ensure sessionStorage is set before redirect
+                    console.log('✅ Login successful, token stored:', !!sessionStorage.getItem('authToken'));
                     setTimeout(() => {
+                        console.log('🔄 Redirecting to dashboard...');
                         window.location.href = 'dashboard.html';
-                    }, 1000);
+                    }, 500); // Reduced delay for faster UX
                 } else {
                     showAlert(result.error || 'Login failed', 'error');
                 }

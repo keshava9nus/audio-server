@@ -483,12 +483,18 @@
             }
         }
         
-        // Check authentication on load
-        if (!userToken) {
-            window.location.href = 'login.html';
-        }
-
         document.addEventListener('DOMContentLoaded', function() {
+            // Check authentication on load (moved inside DOMContentLoaded)
+            userToken = sessionStorage.getItem('authToken');
+            console.log('🔍 Dashboard loading - Token check:', !!userToken);
+            console.log('🔍 SessionStorage authToken:', sessionStorage.getItem('authToken'));
+            if (!userToken) {
+                console.log('❌ No token found, redirecting to login');
+                window.location.href = 'login.html';
+                return;
+            }
+            console.log('✅ Token found, loading dashboard');
+            
             // Check if tunnel assignment has been updated
             const storedTunnel = sessionStorage.getItem('assignedTunnel');
             if (storedTunnel && storedTunnel !== STREAMING_SERVER.replace('https://', '')) {
