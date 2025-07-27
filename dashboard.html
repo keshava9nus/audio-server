@@ -447,11 +447,30 @@
         
         // Smart routing function - determines which server to use based on request type
         function getServerUrl(endpoint) {
-            // Route ALL API calls to the assigned streaming server to eliminate main server bottleneck
-            console.log(`🎯 All requests routed to streaming server: ${STREAMING_SERVER}${endpoint}`);
-            console.log(`🔍 STREAMING_SERVER value: "${STREAMING_SERVER}"`);
-            console.log(`🔍 Assigned tunnel from localStorage: "${localStorage.getItem('assignedTunnel')}"`);
-            return STREAMING_SERVER;
+            // Route user info, stats, and authentication calls to main server
+            // Route file streaming calls to streaming server
+            const mainServerEndpoints = [
+                '/student/info',
+                '/student/stats', 
+                '/student/schedules',
+                '/student/change-password',
+                '/auth/',
+                '/admin/'
+            ];
+            
+            const shouldUseMainServer = mainServerEndpoints.some(mainEndpoint => 
+                endpoint.startsWith(mainEndpoint)
+            );
+            
+            if (shouldUseMainServer) {
+                console.log(`🏢 Main server request: ${MAIN_SERVER}${endpoint}`);
+                return MAIN_SERVER;
+            } else {
+                console.log(`🎯 Streaming server request: ${STREAMING_SERVER}${endpoint}`);
+                console.log(`🔍 STREAMING_SERVER value: "${STREAMING_SERVER}"`);
+                console.log(`🔍 Assigned tunnel from localStorage: "${localStorage.getItem('assignedTunnel')}"`);
+                return STREAMING_SERVER;
+            }
         }
         
         // Update streaming server from tunnel assignment
