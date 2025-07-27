@@ -226,21 +226,31 @@
                 
                 if (response.ok) {
                     showAlert('Login successful! Redirecting...', 'success');
-                    // Store token and tunnel assignment
+                    
+                    // Extract user info from token for user-specific storage
+                    const payload = JSON.parse(atob(result.token.split('.')[1]));
+                    const userKey = `user_${payload.studentId}`;
+                    
+                    // Store token in sessionStorage (tab-specific) + localStorage (persistent)
                     sessionStorage.setItem('authToken', result.token);
+                    sessionStorage.setItem('currentUser', userKey);
+                    sessionStorage.setItem('userEmail', payload.email);
+                    
+                    // Also store in localStorage for persistence (user-specific keys)
+                    localStorage.setItem(`${userKey}_token`, result.token);
+                    localStorage.setItem(`${userKey}_email`, payload.email);
                     
                     // Store assigned tunnel for streaming server routing
                     if (result.assignedTunnel && result.assignedTunnel.tunnelUrl) {
                         sessionStorage.setItem('assignedTunnel', result.assignedTunnel.tunnelUrl);
-                        console.log(`🎯 Assigned to streaming tunnel: ${result.assignedTunnel.tunnelUrl}`);
+                        localStorage.setItem(`${userKey}_tunnel`, result.assignedTunnel.tunnelUrl);
+                        console.log(`🎯 User ${payload.email} assigned to tunnel: ${result.assignedTunnel.tunnelUrl}`);
+                        console.log(`🔐 Tab-isolated session created for ${payload.email}`);
                     }
                     
-                    // Add debugging and ensure sessionStorage is set before redirect
-                    console.log('✅ Login successful, token stored:', !!sessionStorage.getItem('authToken'));
                     setTimeout(() => {
-                        console.log('🔄 Redirecting to dashboard...');
                         window.location.href = 'dashboard.html';
-                    }, 500); // Reduced delay for faster UX
+                    }, 1000);
                 } else {
                     showAlert(result.error || 'Login failed', 'error');
                 }

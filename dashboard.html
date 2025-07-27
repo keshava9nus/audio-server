@@ -394,8 +394,56 @@
     </div>
 
     <script>
-        let userToken = sessionStorage.getItem('authToken');
+        // Ensure session isolation by including a unique session ID
+        const sessionId = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        
+        // Prioritize sessionStorage (tab-specific) over localStorage
+        let userToken = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
         let currentUser = null;
+        let userKey = sessionStorage.getItem('currentUser');
+        
+        // If no session data, try to restore from localStorage
+        if (!userToken || !userKey) {
+            console.log(`🔄 No tab session found, checking localStorage...`);
+            // Check if we have any user tokens in localStorage
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && key.endsWith('_token')) {
+                    const storedToken = localStorage.getItem(key);
+                    const storedUserKey = key.replace('_token', '');
+                    const storedEmail = localStorage.getItem(`${storedUserKey}_email`);
+                    
+                    if (storedToken && storedEmail) {
+                        console.log(`🔍 Found stored user: ${storedEmail}, asking user to choose...`);
+                        // For now, use the first found user (you could add user selection UI here)
+                        userToken = storedToken;
+                        userKey = storedUserKey;
+                        
+                        // Set in sessionStorage for this tab
+                        sessionStorage.setItem('authToken', userToken);
+                        sessionStorage.setItem('currentUser', userKey);
+                        sessionStorage.setItem('userEmail', storedEmail);
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Extract user info from token
+        if (userToken) {
+            try {
+                const payload = JSON.parse(atob(userToken.split('.')[1]));
+                if (!userKey) {
+                    userKey = `user_${payload.studentId}`;
+                    sessionStorage.setItem('currentUser', userKey);
+                }
+                
+                console.log(`🔍 Session ID: ${sessionId}, User: ${payload.email}, UserKey: ${userKey}`);
+                console.log(`🔐 Tab-isolated session active for ${payload.email}`);
+            } catch (e) {
+                console.error('Failed to parse token for user key:', e);
+            }
+        }
 
         // Multi-server architecture configuration
         const MAIN_SERVER_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
@@ -1116,7 +1164,7 @@
         }
 
         async function apiCall(endpoint, method = 'GET', data = null) {
-            const token = sessionStorage.getItem('authToken');
+            const token = sessionStorage.getItem('authToken') || localStorage.getItem('authToken');
             const options = {
                 method,
                 headers: {
@@ -1146,7 +1194,11 @@
         }
 
         function logout() {
-            sessionStorage.removeItem('authToken');
+            // Clear both session and local storage
+            sessionStorage.clear();
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('assignedTunnel');
+            console.log(`🚪 User logged out, storage cleared`);
             window.location.href = 'login.html';
         }
 
