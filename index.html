@@ -296,20 +296,13 @@
                     SERVER_URL = await findWorkingPort();
                 }
                 
-                const response = await fetch(`${SERVER_URL}/api/status?t=${Date.now()}`, {
-                    cache: 'no-cache',
-                    headers: {
-                        'Cache-Control': 'no-cache, no-store, must-revalidate',
-                        'Pragma': 'no-cache'
-                    }
-                });
+                const response = await fetch(`${SERVER_URL}/api/status`);
                 
                 const indicator = document.getElementById('server-status');
                 if (response.ok) {
-                    const status = await response.json();
                     indicator.innerHTML = `
                         <span class="status-dot"></span>
-                        <span>Server Online (${status.activeSchedules} schedules active)</span>
+                        <span>Server Online (Port ${workingPort || '8000'})</span>
                     `;
                 } else {
                     throw new Error('Server offline');
