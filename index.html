@@ -296,7 +296,13 @@
                     SERVER_URL = await findWorkingPort();
                 }
                 
-                const response = await fetch(`${SERVER_URL}/api/status`);
+                const response = await fetch(`${SERVER_URL}/api/status?t=${Date.now()}`, {
+                    cache: 'no-cache',
+                    headers: {
+                        'Cache-Control': 'no-cache, no-store, must-revalidate',
+                        'Pragma': 'no-cache'
+                    }
+                });
                 const status = await response.json();
                 
                 const indicator = document.getElementById('server-status');
