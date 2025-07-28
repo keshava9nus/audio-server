@@ -303,13 +303,13 @@
                         'Pragma': 'no-cache'
                     }
                 });
-                const status = await response.json();
                 
                 const indicator = document.getElementById('server-status');
                 if (response.ok) {
+                    const status = await response.json();
                     indicator.innerHTML = `
                         <span class="status-dot"></span>
-                        <span>Server Online (Port ${workingPort || '8000'})</span>
+                        <span>Server Online (${status.activeSchedules} schedules active)</span>
                     `;
                 } else {
                     throw new Error('Server offline');
